@@ -4,15 +4,15 @@
 
 ## Summary
 
-Build the portfolio as a single Next.js App Router application. Phase 1 establishes the project and test environment. Phase 2 establishes the theme provider, OAuth session boundary, and server-enforced Admin/Visitor RBAC. Phase 3 extends the public experience with a responsive hero, chronological timeline, competency grid, dynamic project cards/detail routes, and an accessible contact footer. Portfolio content remains data-driven and presentation components remain isolated and testable.
+Build the portfolio as a single Next.js App Router application. Phase 1 establishes the project and test environment. Phase 2 establishes the theme provider, OAuth session boundary, and server-enforced Admin/Visitor RBAC. Phase 3 delivers the public portfolio UI. Phase 4 adds a server-loaded Markdown blog engine. Phase 5 adds SQLite-backed Admin CRUD APIs and Admin-only editing forms. Portfolio content remains data-driven and presentation components remain isolated and testable.
 
 ## Technical Context
 
 **Language/Version**: TypeScript 6, React 19, Next.js 16 App Router
 
-**Primary Dependencies**: Tailwind CSS 3, next-themes, next-auth 5, Jest 30, React Testing Library
+**Primary Dependencies**: Tailwind CSS 3, next-themes, next-auth 5, react-markdown, gray-matter, @tailwindcss/typography, better-sqlite3, Jest 30, React Testing Library
 
-**Storage**: Internal TypeScript data modules for this foundation; Markdown content storage is a later feature
+**Storage**: Internal Markdown files for blog posts and a local SQLite database for projects and skills, isolated behind server-only repository functions
 
 **Testing**: Jest with jsdom, React Testing Library, user-event, jest-dom; responsive and accessibility checks at mobile, tablet, and desktop widths
 
@@ -22,7 +22,7 @@ Build the portfolio as a single Next.js App Router application. Phase 1 establis
 
 **Performance Goals**: Public shell and first meaningful content visible within 2 seconds on a local production build; theme changes do not navigate
 
-**Constraints**: Mobile-first responsive layout, WCAG 2.1 AA semantics and focus states, server-only OAuth secrets, fail-closed Admin authorization, no hardcoded portfolio content in presentation components
+**Constraints**: Mobile-first responsive layout, WCAG 2.1 AA semantics and focus states, server-only OAuth secrets, fail-closed Admin authorization, no hardcoded portfolio content in presentation components, raw Markdown HTML disabled, validated mutations
 
 **Scale/Scope**: One public single-page portfolio, one dynamic project detail route, two OAuth providers, two session roles
 
@@ -33,6 +33,8 @@ Build the portfolio as a single Next.js App Router application. Phase 1 establis
 - **Component-first responsive UI**: PASS. Phase 3 uses isolated components and CSS responsive constraints without alternate markup trees.
 - **Dynamic data separation**: PASS. Hero, timeline, competencies, projects, and contact links consume portfolio data modules.
 - **Secure RBAC**: PASS. Role resolution and admin route protection occur on the server boundary; client UI is not the authorization source.
+- **Dynamic Markdown content**: PASS. Blog posts are loaded from internal Markdown files on the server.
+- **Protected CRUD**: PASS. API handlers independently verify Admin sessions and validate payloads before persistence.
 
 ## Applied Guidelines
 
@@ -41,6 +43,9 @@ Build the portfolio as a single Next.js App Router application. Phase 1 establis
 - Keep client components limited to interactive theme/auth controls; render static portfolio sections as server components where possible.
 - Use semantic landmarks, ordered lists for chronology, descriptive link names, and visible keyboard focus states.
 - Prefer CSS grid/flex responsive constraints over JavaScript viewport branching.
+- Keep Markdown loading and SQLite access server-only; do not import either boundary into client components.
+- Keep route handlers thin by delegating validation and persistence to `src/lib/content` modules.
+- Treat Admin UI conditions as presentation only; every mutation endpoint independently checks `session.role`.
 
 ## Implementation Steps
 
@@ -72,11 +77,29 @@ Build the portfolio as a single Next.js App Router application. Phase 1 establis
 
 **Plan 3.5**: Validate responsive behavior at 375px, 768px, and 1440px widths and run accessibility checks for landmarks, heading order, keyboard navigation, and link names. [FR-001, FR-010; US4]
 
-### Phase 4: Polish and Cross-Cutting Validation [planned]
+### Phase 4: Markdown Blog Engine [planned]
 
-**Plan 4.1**: Run the complete test, lint, and production build gates; update the quickstart and environment documentation. [FR-011, FR-012]
+**Plan 4.1**: Install Markdown/front matter/typography dependencies and add server-only Markdown fixtures and loader. [FR-013, FR-015]
 
-**Plan 4.2**: Review the requirement mapping and confirm no portfolio content is hardcoded inside presentation components. [FR-002, FR-012]
+**Plan 4.2**: Implement `/blog` and `/blog/[slug]` routes with metadata, safe Markdown rendering, prose dark/light classes, and not-found behavior. [FR-013, FR-014, FR-015]
+
+**Plan 4.3**: Add Jest/RTL tests for Markdown parsing, index data, route lookup, and malformed/missing posts. [FR-013, FR-014, FR-021]
+
+### Phase 5: Admin CRUD APIs and Editing UI [planned]
+
+**Plan 5.1**: Add SQLite schema/seed access, project/skill validation, and server-only repository functions. [FR-016, FR-018, FR-020]
+
+**Plan 5.2**: Implement `/api/projects` and `/api/skills` GET/POST/PATCH/DELETE handlers with Admin-only mutation authorization. [FR-016, FR-017, FR-018, FR-020]
+
+**Plan 5.3**: Implement the Admin editor route and client form for project/skill CRUD with conditional rendering and operation states. [FR-019]
+
+**Plan 5.4**: Add API authorization/validation tests and Admin form visibility/submission tests. [FR-017, FR-018, FR-019, FR-021]
+
+### Phase 6: Polish and Cross-Cutting Validation [planned]
+
+**Plan 6.1**: Complete manual responsive/accessibility review and document evidence for 375px, 768px, and 1440px viewports. [FR-010, FR-011]
+
+**Plan 6.2**: Run Jest, ESLint, and `next build`; review data boundaries and environment documentation. [FR-011, FR-012, FR-020, FR-021]
 
 ## Project Structure
 
@@ -93,6 +116,11 @@ webapp/
 ├── src/
 │   ├── app/
 │   │   ├── api/auth/[...nextauth]/route.ts
+│   │   ├── api/projects/route.ts
+│   │   ├── api/skills/route.ts
+│   │   ├── admin/page.tsx
+│   │   ├── blog/[slug]/page.tsx
+│   │   ├── blog/page.tsx
 │   │   ├── projects/[slug]/page.tsx
 │   │   ├── globals.css
 │   │   ├── layout.tsx
@@ -110,8 +138,14 @@ webapp/
 │   │   ├── RoleBadge.tsx
 │   │   └── ThemeToggle.tsx
 │   ├── data/portfolio.ts
+│   ├── content/blog/*.md
+│   ├── lib/content/blog.ts
+│   ├── lib/content/repository.ts
+│   ├── lib/content/schemas.ts
 │   ├── lib/auth/roles.ts
-│   └── auth.ts
+│   ├── auth.ts
+│   └── admin/ContentEditor.tsx
+├── data/portfolio.sqlite
 ├── types/next-auth.d.ts
 ├── middleware.ts
 ├── jest.config.ts
@@ -159,14 +193,42 @@ webapp/
 - [x] T025 [Plan:3.3] Implement `src/app/projects/[slug]/page.tsx` with data lookup, detail rendering, and `notFound()` fallback.
 - [x] T026 [Plan:3.4] Implement local SVG icon components and data-driven `ContactFooter` in `src/components/ContactFooter.tsx`.
 - [x] T027 [Plan:3.4] Add the contact footer to `src/components/PortfolioShell.tsx` or the root composition without nesting page cards inside cards.
-- [ ] T028 [Plan:3.5] Add responsive and accessibility validation notes to `specs/001-authenticated-portfolio/quickstart.md` covering 375px, 768px, and 1440px viewports.
-- [ ] T029 [Plan:3.5] Run keyboard, landmark, heading-order, and accessible-name checks for Phase 3 components and record evidence in `specs/001-authenticated-portfolio/quickstart.md`.
+- [x] T028 [Plan:3.5] Add responsive and accessibility validation notes to `specs/001-authenticated-portfolio/quickstart.md` covering 375px, 768px, and 1440px viewports.
+- [x] T029 [Plan:3.5] Run keyboard, landmark, heading-order, and accessible-name checks for Phase 3 components and record evidence in `specs/001-authenticated-portfolio/quickstart.md`.
 
 ### Phase 4: Polish and TDD Evidence
 
-- [ ] T030 [Plan:4.1] Run Jest, ESLint, and `next build`; fix only Phase 3 findings in the affected files.
-- [ ] T031 [Plan:4.2] Review the requirement mapping and verify all public content is sourced from `src/data/portfolio.ts`.
+- [x] T030 [Plan:4.1] Run Jest, ESLint, and `next build`; fix only Phase 3 findings in the affected files.
+- [x] T031 [Plan:4.2] Review the requirement mapping and verify all public content is sourced from `src/data/portfolio.ts`.
 - [ ] T032 [Plan:3.1,3.2,3.3,3.4] Create a Red commit after Phase 3 tests fail, a Green commit after implementations pass, and a Refactor commit after accessibility/responsive cleanup. Do not squash these commits.
+
+### Phase 4: Markdown Blog Engine
+
+- [ ] T033 [Plan:4.1] Install `react-markdown`, `gray-matter`, and `@tailwindcss/typography`; update `package.json`, `package-lock.json`, and `tailwind.config.ts`.
+- [ ] T034 [P] [Plan:4.1] Add Markdown fixtures under `src/content/blog/` with front matter for title, date, and summary.
+- [ ] T035 [Plan:4.1] Write failing Markdown loader tests in `src/lib/content/blog.test.ts` for metadata, body, missing slugs, and malformed front matter.
+- [ ] T036 [Plan:4.1] Implement the server-only Markdown loader in `src/lib/content/blog.ts` with safe path handling and raw HTML disabled.
+- [ ] T037 [P] [Plan:4.2] Write failing blog index and detail-route tests in `src/app/blog/page.test.tsx` and `src/app/blog/[slug]/page.test.tsx`.
+- [ ] T038 [Plan:4.2] Implement `/blog` and `/blog/[slug]` routes with `notFound()` handling and responsive dark/light `prose` styling.
+
+### Phase 5: Admin CRUD APIs and Editing UI
+
+- [ ] T039 [Plan:5.1] Install `better-sqlite3` and its types; configure Next server externalization and add `data/portfolio.sqlite` to `.gitignore`.
+- [ ] T040 [P] [Plan:5.1] Write failing validation tests for project and skill payloads in `src/lib/content/schemas.test.ts`.
+- [ ] T041 [Plan:5.1] Implement SQLite initialization, schema creation, seed data, and repository functions in `src/lib/content/repository.ts`.
+- [ ] T042 [Plan:5.1] Implement project and skill payload validation in `src/lib/content/schemas.ts`.
+- [ ] T043 [P] [Plan:5.2] Write failing API authorization and CRUD tests for `src/app/api/projects/route.test.ts` and `src/app/api/skills/route.test.ts`.
+- [ ] T044 [Plan:5.2] Implement `/api/projects` GET/POST/PATCH/DELETE handlers with server-session role checks and structured errors.
+- [ ] T045 [Plan:5.2] Implement `/api/skills` GET/POST/PATCH/DELETE handlers with server-session role checks and structured errors.
+- [ ] T046 [Plan:5.3] Write failing Admin editor visibility and operation-state tests in `src/components/ContentEditor.test.tsx`.
+- [ ] T047 [Plan:5.3] Implement Admin-only editor controls in `src/components/ContentEditor.tsx` for project and skill CRUD.
+- [ ] T048 [Plan:5.3] Implement the protected Admin route in `src/app/admin/page.tsx` and connect it to `ContentEditor`.
+
+### Phase 6: Final Validation
+
+- [ ] T049 [Plan:6.1] Complete responsive and keyboard accessibility review and record evidence in `specs/001-authenticated-portfolio/quickstart.md`.
+- [ ] T050 [Plan:6.2] Run the complete Jest, lint, and production build gates; fix only relevant Phase 4/5 findings.
+- [ ] T051 [Plan:6.2] Review all new route boundaries, secret usage, Markdown paths, and Admin mutation authorization before release.
 
 ## TDD Commit Checkpoints
 
@@ -188,6 +250,8 @@ The agent must not create these commits without an explicit commit request. The 
 - T023 must be red before T025; T024 and T025 form the project-card/detail-route slice.
 - T028-T029 follow the complete Phase 3 UI and precede the Refactor commit.
 - Phase 4 follows all Phase 3 tasks.
+- Phase 5 follows the blog/content boundary setup and may proceed after the shared content model is established.
+- Phase 6 follows Phases 4 and 5.
 
 ## Requirement Mapping
 
@@ -206,3 +270,12 @@ The agent must not create these commits without an explicit commit request. The 
 | FR-011 | 1.2, 2.1, 2.3, 3.1, 3.5, 4.1 | Jest/RTL suites and final validation commands |
 | FR-012 | 2.2, 2.3, 4.2 | Server-only environment reads, middleware enforcement, data separation review |
 | US4 | 3.1, 3.2, 3.3, 3.4, 3.5 | Hero, timeline, competency grid, project detail route, contact footer, responsive/accessibility evidence |
+| FR-013 | 4.1, 4.2 | `src/lib/content/blog.ts`, Markdown fixtures, blog routes |
+| FR-014 | 4.2 | `src/app/blog/page.tsx`, `src/app/blog/[slug]/page.tsx` |
+| FR-015 | 4.2 | Typography plugin and themed `prose` classes |
+| FR-016 | 5.1, 5.2 | SQLite repository, `/api/projects`, `/api/skills` |
+| FR-017 | 2.3, 5.2, 5.3 | `middleware.ts`, route role checks, Admin editor |
+| FR-018 | 5.1, 5.2 | Schemas and structured API validation errors |
+| FR-019 | 5.3 | `ContentEditor.tsx`, Admin route, operation-state tests |
+| FR-020 | 5.1, 5.2 | Server-only repository boundary and API handlers |
+| FR-021 | 4.3, 5.4, 6.2 | Blog, API, Admin UI, and final validation tests |
