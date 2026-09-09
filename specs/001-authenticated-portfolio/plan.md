@@ -4,15 +4,15 @@
 
 ## Summary
 
-Build the portfolio as a single Next.js App Router application. Phase 1 establishes the project and test environment. Phase 2 establishes the theme provider, OAuth session boundary, and server-enforced Admin/Visitor RBAC. Phase 3 delivers the public portfolio UI. Phase 4 adds a server-loaded Markdown blog engine. Phase 5 adds SQLite-backed Admin CRUD APIs and Admin-only editing forms. Portfolio content remains data-driven and presentation components remain isolated and testable.
+Build the portfolio as a single Next.js App Router application. Phase 1 establishes the project and test environment. Phase 2 establishes the theme provider, OAuth session boundary, and server-enforced Admin/Visitor RBAC. Phase 3 delivers the public portfolio UI. Phase 4 adds a server-loaded Markdown blog engine. Phase 5 adds lowdb-backed Admin CRUD APIs and Admin-only editing forms. Portfolio content remains data-driven and presentation components remain isolated and testable.
 
 ## Technical Context
 
 **Language/Version**: TypeScript 6, React 19, Next.js 16 App Router
 
-**Primary Dependencies**: Tailwind CSS 3, next-themes, next-auth 5, react-markdown, gray-matter, @tailwindcss/typography, better-sqlite3, Jest 30, React Testing Library
+**Primary Dependencies**: Tailwind CSS 3, next-themes, next-auth 5, react-markdown, gray-matter, @tailwindcss/typography, lowdb, Jest 30, React Testing Library
 
-**Storage**: Internal Markdown files for blog posts and a local SQLite database for projects and skills, isolated behind server-only repository functions
+**Storage**: Internal Markdown files for blog posts and a local JSON data store for projects and skills, isolated behind server-only repository functions
 
 **Testing**: Jest with jsdom, React Testing Library, user-event, jest-dom; responsive and accessibility checks at mobile, tablet, and desktop widths
 
@@ -43,7 +43,7 @@ Build the portfolio as a single Next.js App Router application. Phase 1 establis
 - Keep client components limited to interactive theme/auth controls; render static portfolio sections as server components where possible.
 - Use semantic landmarks, ordered lists for chronology, descriptive link names, and visible keyboard focus states.
 - Prefer CSS grid/flex responsive constraints over JavaScript viewport branching.
-- Keep Markdown loading and SQLite access server-only; do not import either boundary into client components.
+- Keep Markdown loading and lowdb access server-only; do not import either boundary into client components.
 - Keep route handlers thin by delegating validation and persistence to `src/lib/content` modules.
 - Treat Admin UI conditions as presentation only; every mutation endpoint independently checks `session.role`.
 
@@ -87,7 +87,7 @@ Build the portfolio as a single Next.js App Router application. Phase 1 establis
 
 ### Phase 5: Admin CRUD APIs and Editing UI [planned]
 
-**Plan 5.1**: Add SQLite schema/seed access, project/skill validation, and server-only repository functions. [FR-016, FR-018, FR-020]
+**Plan 5.1**: Add lowdb schema/seed access, project/skill validation, and server-only repository functions. [FR-016, FR-018, FR-020]
 
 **Plan 5.2**: Implement `/api/projects` and `/api/skills` GET/POST/PATCH/DELETE handlers with Admin-only mutation authorization. [FR-016, FR-017, FR-018, FR-020]
 
@@ -145,7 +145,7 @@ webapp/
 │   ├── lib/auth/roles.ts
 │   ├── auth.ts
 │   └── admin/ContentEditor.tsx
-├── data/portfolio.sqlite
+├── data/portfolio.json
 ├── types/next-auth.d.ts
 ├── middleware.ts
 ├── jest.config.ts
@@ -213,9 +213,9 @@ webapp/
 
 ### Phase 5: Admin CRUD APIs and Editing UI
 
-- [ ] T039 [Plan:5.1] Install `better-sqlite3` and its types; configure Next server externalization and add `data/portfolio.sqlite` to `.gitignore`.
+- [ ] T039 [Plan:5.1] Install `lowdb` and add the generated `data/portfolio.json` store to `.gitignore`.
 - [ ] T040 [P] [Plan:5.1] Write failing validation tests for project and skill payloads in `src/lib/content/schemas.test.ts`.
-- [ ] T041 [Plan:5.1] Implement SQLite initialization, schema creation, seed data, and repository functions in `src/lib/content/repository.ts`.
+- [ ] T041 [Plan:5.1] Implement lowdb initialization, seed data, and repository functions in `src/lib/content/repository.ts`.
 - [ ] T042 [Plan:5.1] Implement project and skill payload validation in `src/lib/content/schemas.ts`.
 - [ ] T043 [P] [Plan:5.2] Write failing API authorization and CRUD tests for `src/app/api/projects/route.test.ts` and `src/app/api/skills/route.test.ts`.
 - [ ] T044 [Plan:5.2] Implement `/api/projects` GET/POST/PATCH/DELETE handlers with server-session role checks and structured errors.
@@ -273,7 +273,7 @@ The agent must not create these commits without an explicit commit request. The 
 | FR-013 | 4.1, 4.2 | `src/lib/content/blog.ts`, Markdown fixtures, blog routes |
 | FR-014 | 4.2 | `src/app/blog/page.tsx`, `src/app/blog/[slug]/page.tsx` |
 | FR-015 | 4.2 | Typography plugin and themed `prose` classes |
-| FR-016 | 5.1, 5.2 | SQLite repository, `/api/projects`, `/api/skills` |
+| FR-016 | 5.1, 5.2 | lowdb repository, `/api/projects`, `/api/skills` |
 | FR-017 | 2.3, 5.2, 5.3 | `middleware.ts`, route role checks, Admin editor |
 | FR-018 | 5.1, 5.2 | Schemas and structured API validation errors |
 | FR-019 | 5.3 | `ContentEditor.tsx`, Admin route, operation-state tests |

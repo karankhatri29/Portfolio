@@ -3,6 +3,7 @@ import type { ContactLink } from "@/data/portfolio";
 function ContactIcon({ name }: { name: ContactLink["icon"] }) {
   const common = { fill: "none", stroke: "currentColor", strokeLinecap: "round" as const, strokeLinejoin: "round" as const, strokeWidth: 1.8, viewBox: "0 0 24 24" };
   if (name === "email") return <svg aria-hidden="true" {...common}><path d="m3 5 9 7 9-7" /><rect x="3" y="5" width="18" height="14" rx="2" /></svg>;
+  if (name === "phone") return <svg aria-hidden="true" {...common}><path d="M6 3h3l2 5-2 2a14 14 0 0 0 5 5l2-2 5 2v3c0 1-1 2-2 2C10 20 4 14 4 5c0-1 1-2 2-2Z" /></svg>;
   if (name === "github") return <svg aria-hidden="true" {...common}><path d="M9 19c-4 1-4-2-5-2m10 4v-3.9a3.4 3.4 0 0 0-.9-2.6c3 0 6.1-1.5 6.1-6.5a5 5 0 0 0-1.3-3.5A4.6 4.6 0 0 0 17.8 4S16.5 3.6 14 5.2a13.4 13.4 0 0 0-5 0C6.5 3.6 5.2 4 5.2 4a4.6 4.6 0 0 0-.1 2.5 5 5 0 0 0-1.3 3.5c0 5 3.1 6.5 6.1 6.5a3.4 3.4 0 0 0-.9 2.6V21" /></svg>;
   return <svg aria-hidden="true" {...common}><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6ZM2 9h4v12H2z" /><circle cx="4" cy="4" r="2" /></svg>;
 }

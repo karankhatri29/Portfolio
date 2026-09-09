@@ -1,13 +1,17 @@
 import { auth } from "@/auth";
+import { AboutSection } from "@/components/AboutSection";
 import { CareerTimeline } from "@/components/CareerTimeline";
 import { CompetencyGrid } from "@/components/CompetencyGrid";
 import { HeroSection } from "@/components/HeroSection";
 import { PortfolioShell } from "@/components/PortfolioShell";
 import { ProjectCard } from "@/components/ProjectCard";
+import { WritingPreview } from "@/components/WritingPreview";
+import { listBlogPosts } from "@/lib/content/blog";
 import { portfolioContent } from "@/data/portfolio";
 
 export default async function Page() {
   const session = await auth();
+  const writing = listBlogPosts();
 
   return (
     <PortfolioShell session={session}>
@@ -18,12 +22,8 @@ export default async function Page() {
         <h2 id="projects-title" className="font-display text-3xl font-semibold">Selected work</h2>
         <div className="mt-10 grid gap-5 md:grid-cols-2">{portfolioContent.projects.map((project) => <ProjectCard key={project.slug} project={project} />)}</div>
       </section>
-      <section id="writing" className="border-t border-ink/10 px-5 py-16 lg:px-8">
-        <div className="mx-auto max-w-6xl"><h2 className="font-display text-3xl font-semibold">Writing and research</h2></div>
-      </section>
-      <section id="about" className="border-t border-ink/10 px-5 py-16 lg:px-8">
-        <div className="mx-auto max-w-6xl"><h2 className="font-display text-3xl font-semibold">About</h2></div>
-      </section>
+      <div className="mx-auto max-w-6xl px-5 lg:px-8"><WritingPreview posts={writing} /></div>
+      <div className="mx-auto max-w-6xl px-5 lg:px-8"><AboutSection about={portfolioContent.about} /></div>
     </PortfolioShell>
   );
 }
