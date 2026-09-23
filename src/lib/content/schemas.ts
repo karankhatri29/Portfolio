@@ -8,6 +8,15 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+function readStringList(value: unknown, field: string, errors: string[]): string[] | undefined {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value) || !value.every(isNonEmptyString)) {
+    errors.push(`${field} must be a list of non-empty strings`);
+    return undefined;
+  }
+  return value.map((item) => item.trim());
+}
+
 export function validateProjectInput(payload: unknown): ValidationResult<Project> {
   const errors: string[] = [];
   const record = typeof payload === "object" && payload !== null ? (payload as Record<string, unknown>) : {};
@@ -26,6 +35,8 @@ export function validateProjectInput(payload: unknown): ValidationResult<Project
     errors.push("every outcome must be a non-empty string");
   }
 
+  const stack = readStringList(record.stack, "stack", errors);
+
   if (errors.length > 0) return { valid: false, errors };
 
   return {
@@ -37,6 +48,7 @@ export function validateProjectInput(payload: unknown): ValidationResult<Project
       summary: record.summary as string,
       role: record.role as string,
       outcomes: record.outcomes as string[],
+      ...(stack ? { stack } : {}),
     },
   };
 }
@@ -47,8 +59,9 @@ export function validateSkillInput(payload: unknown): ValidationResult<Omit<Skil
 
   if (!isNonEmptyString(record.name)) errors.push("name is required");
   if (!isNonEmptyString(record.description)) errors.push("description is required");
+  const tools = readStringList(record.tools, "tools", errors);
 
   if (errors.length > 0) return { valid: false, errors };
 
-  return { valid: true, data: { name: record.name as string, description: record.description as string } };
+  return { valid: true, data: { name: record.name as string, description: record.description as string, ...(tools ? { tools } : {}) } };
 }
