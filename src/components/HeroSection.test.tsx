@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 
 import { HeroSection } from "@/components/HeroSection";
 import { portfolioContent } from "@/data/portfolio";
@@ -81,5 +81,66 @@ describe("HeroSection", () => {
       expect(line.command.length).toBeLessThanOrEqual(30);
       expect(line.output.length).toBeLessThanOrEqual(32);
     }
+  });
+
+  describe("interactive terminal", () => {
+    beforeAll(() => {
+      HTMLDialogElement.prototype.showModal = function showModal(this: HTMLDialogElement) {
+        this.setAttribute("open", "");
+      };
+      HTMLDialogElement.prototype.close = function close(this: HTMLDialogElement) {
+        this.removeAttribute("open");
+        this.dispatchEvent(new Event("close"));
+      };
+    });
+
+    const runInTerminal = (line: string) => {
+      const input = screen.getByRole("textbox", { name: /type a command or ask a question/i });
+      fireEvent.change(input, { target: { value: line } });
+      fireEvent.submit(input.closest("form")!);
+    };
+    const log = () => within(screen.getByRole("log", { name: "Terminal output" }));
+
+    it("keeps the typed card and adds an Ask button that opens the terminal dialog", () => {
+      render(<HeroSection content={portfolioContent} />);
+      expect(screen.getByRole("group", { name: "Terminal summary" })).toBeInTheDocument();
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole("button", { name: /open the interactive terminal/i }));
+
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+    });
+
+    it("lists the real projects, linked to their pages, when they are provided", () => {
+      const projects = [{ slug: "email-triage", title: "Email Triage", year: "2026", summary: "s", role: "Dev", outcomes: ["o"] }];
+      render(<HeroSection content={portfolioContent} projects={projects} skills={[{ id: "1", name: "AI and NLP", description: "d", tools: ["spaCy"] }]} />);
+      fireEvent.click(screen.getByRole("button", { name: /open the interactive terminal/i }));
+
+      runInTerminal("projects");
+      expect(log().getByRole("link", { name: "Email Triage (2026)" })).toHaveAttribute("href", "/projects/email-triage");
+
+      runInTerminal("skills");
+      expect(log().getByText("AI and NLP: spaCy")).toBeInTheDocument();
+    });
+
+    it("falls back to the timeline's project names when no projects are provided", () => {
+      render(<HeroSection content={portfolioContent} />);
+      fireEvent.click(screen.getByRole("button", { name: /open the interactive terminal/i }));
+
+      runInTerminal("projects");
+
+      expect(log().getByText(new RegExp(portfolioContent.timeline[0].organization))).toBeInTheDocument();
+    });
+
+    it("prints contact details without a phone number", () => {
+      render(<HeroSection content={portfolioContent} />);
+      fireEvent.click(screen.getByRole("button", { name: /open the interactive terminal/i }));
+
+      runInTerminal("contact");
+
+      expect(log().getByRole("link", { name: /^Email:/ })).toBeInTheDocument();
+      expect(log().getByRole("link", { name: /^GitHub:/ })).toBeInTheDocument();
+      expect(screen.getByRole("log", { name: "Terminal output" }).textContent).not.toMatch(/tel:|\+91/);
+    });
   });
 });

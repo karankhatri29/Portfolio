@@ -108,6 +108,19 @@ async function main() {
   `;
   await sql`CREATE INDEX IF NOT EXISTS contact_messages_created_idx ON contact_messages (created_at)`;
 
+  // Rate limiting for the "ask Karan" assistant. Rows are tiny and pruned automatically; `question`
+  // stays empty unless ASK_LOG_QUESTIONS=true.
+  await sql`
+    CREATE TABLE IF NOT EXISTS ask_requests (
+      id BIGSERIAL PRIMARY KEY,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      visitor_hash TEXT NOT NULL,
+      question TEXT NOT NULL DEFAULT ''
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS ask_requests_visitor_idx ON ask_requests (visitor_hash, created_at)`;
+  await sql`CREATE INDEX IF NOT EXISTS ask_requests_created_idx ON ask_requests (created_at)`;
+
   await sql`
     CREATE TABLE IF NOT EXISTS error_logs (
       id BIGSERIAL PRIMARY KEY,

@@ -2,7 +2,10 @@ import Image from "next/image";
 import Link from "next/link";
 import type { CSSProperties } from "react";
 
+import { HeroTerminal } from "@/components/terminal/HeroTerminal";
 import type { PortfolioContent, TerminalLine } from "@/data/portfolio";
+import type { TerminalContext } from "@/lib/ask/commands";
+import type { Project, SkillRecord } from "@/lib/content/repository";
 
 const TYPE_MS_PER_CHAR = 32;
 const PAUSE_MS = 280;
@@ -19,6 +22,22 @@ function scheduleTerminal(lines: TerminalLine[]) {
     return { command, output };
   });
   return rows;
+}
+
+const contactLabel: Record<string, string> = { email: "Email", github: "GitHub", linkedin: "LinkedIn" };
+
+// What the interactive terminal's built-in commands print, taken from the same data the page renders.
+function terminalContext(content: PortfolioContent, projects?: Project[], skills?: SkillRecord[]): TerminalContext {
+  return {
+    name: content.name,
+    focus: content.terminal,
+    skills: (skills ?? []).map((skill) => ({ name: skill.name, tools: skill.tools ?? [] })),
+    projects: projects
+      ? projects.map((project) => ({ title: project.title, year: project.year, href: `/projects/${project.slug}` }))
+      : content.timeline.map((item) => ({ title: item.organization, year: item.year })),
+    contacts: content.contactLinks
+      .map((link) => ({ label: contactLabel[link.icon] ?? link.label, text: link.href.replace(/^mailto:/, "").replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, ""), href: link.href })),
+  };
 }
 
 const typed = (text: string, delay: number): CSSProperties => ({ "--n": text.length, "--delay": `${delay}ms` }) as CSSProperties;
@@ -47,7 +66,7 @@ function TerminalCard({ lines }: { lines: TerminalLine[] }) {
   );
 }
 
-export function HeroSection({ content, bookingUrl }: { content: PortfolioContent; bookingUrl?: string }) {
+export function HeroSection({ content, bookingUrl, projects, skills }: { content: PortfolioContent; bookingUrl?: string; projects?: Project[]; skills?: SkillRecord[] }) {
   const [role, ...rest] = content.headline.split(/(?<=\.)\s+/);
   const claim = rest.join(" ");
 
@@ -88,7 +107,9 @@ export function HeroSection({ content, bookingUrl }: { content: PortfolioContent
           </figure>
         </div>
         <div className="relative -mt-10 ml-4 mr-1 sm:ml-6 sm:mr-0 sm:w-80 lg:absolute lg:-left-6 lg:bottom-4 lg:m-0">
-          <TerminalCard lines={content.terminal} />
+          <HeroTerminal context={terminalContext(content, projects, skills)}>
+            <TerminalCard lines={content.terminal} />
+          </HeroTerminal>
         </div>
       </div>
     </section>
