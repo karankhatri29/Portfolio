@@ -56,6 +56,110 @@ describe("ProjectShowcase", () => {
     expect(scrollBy.mock.calls[0][0].left).toBeGreaterThan(0);
   });
 
+  describe("draggable scroll line", () => {
+  // jsdom's PointerEvent drops coordinates, so send mouse events named as pointer events.
+  const pointer = (target: Element, type: "pointerdown" | "pointermove" | "pointerup", clientX: number, button = 0) =>
+    fireEvent(target, new MouseEvent(type, { bubbles: true, cancelable: true, clientX, button }));
+
+    // jsdom has no layout: describe a 1200px row in a 400px viewport, with a 600px track and a 200px handle.
+    function setupTrack() {
+      render(<ProjectShowcase projects={projects} />);
+      const region = screen.getByRole("region", { name: /scrolls horizontally/i });
+      region.scrollTo = jest.fn();
+      region.scrollBy = jest.fn();
+      Object.defineProperty(region, "scrollWidth", { configurable: true, value: 1200 });
+      Object.defineProperty(region, "clientWidth", { configurable: true, value: 400 });
+      fireEvent.scroll(region);
+      const track = screen.getByRole("scrollbar", { name: "Scroll projects" });
+      const thumb = screen.getByTestId("scroll-progress-thumb");
+      track.getBoundingClientRect = () => ({ left: 0, right: 600, width: 600, top: 0, bottom: 24, height: 24, x: 0, y: 0, toJSON: () => ({}) });
+      thumb.getBoundingClientRect = () => ({ left: 0, right: 200, width: 200, top: 0, bottom: 2, height: 2, x: 0, y: 0, toJSON: () => ({}) });
+      return { region, track };
+    }
+
+    it("is exposed as a horizontal scrollbar for the row and reports position", async () => {
+      const { region, track } = setupTrack();
+
+      await waitFor(() => expect(track).toBeInTheDocument());
+      expect(track).toHaveAttribute("aria-orientation", "horizontal");
+      expect(track).toHaveAttribute("aria-controls", region.id);
+      expect(track).toHaveAttribute("aria-valuenow", "0");
+    });
+
+    it("jumps the row when the line is clicked away from the handle", () => {
+      const { region, track } = setupTrack();
+
+      pointer(track, "pointerdown", 500, 0);
+      pointer(track, "pointerup", 500);
+
+      // Handle centres on the click: (500 - 100) / (600 - 200) = 100% of the 800px of overflow.
+      expect(region.scrollTo).toHaveBeenLastCalledWith({ left: 800, behavior: "auto" });
+    });
+
+    it("scrubs the row while the handle is dragged, and turns snapping off until release", () => {
+      const { region, track } = setupTrack();
+
+      pointer(track, "pointerdown", 100, 0);
+      expect(region.className).toContain("snap-none");
+
+      pointer(track, "pointermove", 300);
+      // Grabbed 100px into the handle: (300 - 100) / 400 = 50% of the overflow.
+      expect(region.scrollTo).toHaveBeenLastCalledWith({ left: 400, behavior: "auto" });
+
+      pointer(track, "pointerup", 300);
+      expect(region.className).toContain("snap-mandatory");
+
+      (region.scrollTo as jest.Mock).mockClear();
+      pointer(track, "pointermove", 500);
+      expect(region.scrollTo).not.toHaveBeenCalled();
+    });
+
+    it("ignores non-primary mouse buttons", () => {
+      const { region, track } = setupTrack();
+
+      pointer(track, "pointerdown", 500, 2);
+
+      expect(region.scrollTo).not.toHaveBeenCalled();
+      expect(region.className).not.toContain("snap-none");
+    });
+
+    it("scrolls with the arrow, Home and End keys", async () => {
+      const user = userEvent.setup();
+      const { region, track } = setupTrack();
+
+      track.focus();
+      await user.keyboard("{ArrowRight}");
+      expect((region.scrollBy as jest.Mock).mock.calls[0][0].left).toBeGreaterThan(0);
+      await user.keyboard("{ArrowLeft}");
+      expect((region.scrollBy as jest.Mock).mock.calls[1][0].left).toBeLessThan(0);
+      await user.keyboard("{End}");
+      expect(region.scrollTo).toHaveBeenLastCalledWith(expect.objectContaining({ left: 1200 }));
+      await user.keyboard("{Home}");
+      expect(region.scrollTo).toHaveBeenLastCalledWith(expect.objectContaining({ left: 0 }));
+    });
+  });
+
+  it("fades only the edges that still hide cards", async () => {
+    render(<ProjectShowcase projects={projects} />);
+    const region = screen.getByRole("region", { name: /scrolls horizontally/i });
+    Object.defineProperty(region, "scrollWidth", { configurable: true, value: 1200 });
+    Object.defineProperty(region, "clientWidth", { configurable: true, value: 400 });
+
+    // At the start only the right edge fades.
+    fireEvent.scroll(region);
+    await waitFor(() => expect(region.className).toContain("mask-image:linear-gradient(to_right,black_90%,transparent)"));
+
+    // In the middle both edges fade.
+    Object.defineProperty(region, "scrollLeft", { configurable: true, value: 400 });
+    fireEvent.scroll(region);
+    await waitFor(() => expect(region.className).toContain("transparent,black_8%,black_92%,transparent"));
+
+    // At the end only the left edge fades.
+    Object.defineProperty(region, "scrollLeft", { configurable: true, value: 800 });
+    fireEvent.scroll(region);
+    await waitFor(() => expect(region.className).toContain("linear-gradient(to_right,transparent,black_8%)"));
+  });
+
   it("hides the native scrollbar", () => {
     render(<ProjectShowcase projects={projects} />);
 
