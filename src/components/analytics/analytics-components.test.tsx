@@ -1,7 +1,9 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
+import { ActivityFeed } from "@/components/analytics/ActivityFeed";
 import { BarList } from "@/components/analytics/BarList";
+import { FunnelChart } from "@/components/analytics/FunnelChart";
 import { MessageInbox } from "@/components/analytics/MessageInbox";
 import { StatCard } from "@/components/analytics/StatCard";
 import { TrafficChart } from "@/components/analytics/TrafficChart";
@@ -36,6 +38,9 @@ describe("BarList", () => {
     expect(screen.getByText("Home")).toBeInTheDocument();
     expect(screen.getByText(/10 views · 4 visitors/)).toBeInTheDocument();
 
+    rerender(<BarList unit="visits" emptyText="Nothing yet." items={[{ label: "Home", value: 1 }]} />);
+    expect(screen.getByText(/^1 visit$/)).toBeInTheDocument();
+
     rerender(<BarList unit="views" emptyText="Nothing yet." items={[]} />);
     expect(screen.getByText("Nothing yet.")).toBeInTheDocument();
   });
@@ -54,6 +59,18 @@ describe("TrafficChart", () => {
     expect(screen.getByRole("img", { name: /Sep 21 to Sep 23/ })).toBeInTheDocument();
     const table = screen.getByRole("table", { name: "Daily traffic" });
     expect(within(table).getAllByRole("row")).toHaveLength(4);
+  });
+
+  it.each([
+    [5, ["0", "3", "6"]],
+    [11, ["0", "6", "12"]],
+    [37, ["0", "20", "40"]],
+    [130, ["0", "80", "160"]],
+  ])("uses whole-number axis labels for a peak of %p", (peak, labels) => {
+    const { container } = render(<TrafficChart data={[{ day: "2026-09-22", views: 1, visitors: 1 }, { day: "2026-09-23", views: peak, visitors: 1 }]} />);
+
+    const axis = [...container.querySelectorAll("svg text")].map((node) => node.textContent).filter((text) => /^\d+$/.test(text ?? ""));
+    expect(axis).toEqual(expect.arrayContaining(labels));
   });
 
   it("explains when there is no traffic yet", () => {
@@ -115,5 +132,57 @@ describe("MessageInbox", () => {
     render(<MessageInbox initialMessages={[]} />);
 
     expect(screen.getByText("No messages here yet.")).toBeInTheDocument();
+  });
+});
+
+describe("FunnelChart", () => {
+  it("shows each step with its share of visitors", () => {
+    render(<FunnelChart funnel={{ visitors: 200, viewedProject: 50, reachedOut: 6 }} />);
+
+    expect(screen.getByText(/1\. Visited the site/)).toBeInTheDocument();
+    expect(screen.getByText(/50 · 25% of visitors/)).toBeInTheDocument();
+    expect(screen.getByText(/6 · 3% of visitors/)).toBeInTheDocument();
+  });
+
+  it("explains when there are no visitors", () => {
+    render(<FunnelChart funnel={{ visitors: 0, viewedProject: 0, reachedOut: 0 }} />);
+
+    expect(screen.getByText(/No visitors recorded/)).toBeInTheDocument();
+  });
+});
+
+describe("ActivityFeed", () => {
+  const now = new Date("2026-09-23T12:00:00Z");
+
+  it("describes pageviews, contact clicks and messages with place and recency", () => {
+    render(
+      <ActivityFeed
+        now={now}
+        items={[
+          { at: "2026-09-23T11:58:00Z", kind: "click", path: "/", country: "US", city: "Austin", device: "mobile", detail: "linkedin" },
+          { at: "2026-09-23T11:30:00Z", kind: "pageview", path: "/", country: "IN", city: "Pune", device: "desktop", detail: "" },
+          { at: "2026-09-23T09:00:00Z", kind: "message", path: "", country: "", city: "", device: "", detail: "Grace" },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText("Clicked the LinkedIn link")).toBeInTheDocument();
+    expect(screen.getByText(/Austin · United States · mobile/)).toBeInTheDocument();
+    expect(screen.getByText("2 min ago")).toBeInTheDocument();
+    expect(screen.getByText("Viewed Home")).toBeInTheDocument();
+    expect(screen.getByText("Grace sent a message")).toBeInTheDocument();
+    expect(screen.getByText("3 h ago")).toBeInTheDocument();
+  });
+
+  it("does not leave a dangling separator when an item has no location", () => {
+    const { container } = render(<ActivityFeed now={now} items={[{ at: "2026-09-23T11:58:00Z", kind: "message", path: "", country: "", city: "", device: "", detail: "Ada" }]} />);
+
+    expect(container.querySelector("li span:last-child")?.textContent).toBe("2 min ago");
+  });
+
+  it("shows an empty state", () => {
+    render(<ActivityFeed items={[]} now={now} />);
+
+    expect(screen.getByText("No activity recorded yet.")).toBeInTheDocument();
   });
 });

@@ -59,10 +59,26 @@ Nothing is committed yet. Run `git status` and check it before committing.
 3. Mark the test message "Replied" or "Archived" to confirm the inbox buttons work, then archive it.
 4. Your own signed-in visits are deliberately not counted; if you want to test as a visitor, use incognito or another browser.
 5. Try `https://YOUR-DOMAIN/?ref=linkedin-test` in incognito and check it appears under "Where visitors come from".
-6. Delete test rows if you want a clean start: in Neon SQL editor run `DELETE FROM events; DELETE FROM contact_messages;`
+6. Check the newer sections too: "Visitor journey", "Campaign links" (open `/?ref=test1` in incognito, open a project, click a contact link), "Audience" (countries and cities only appear on the live Vercel site, not on localhost), and "Avg. reading time / scroll depth" on a blog post (read it for 10+ seconds, scroll, then switch tabs or close it).
+7. Delete test rows if you want a clean start: in Neon SQL editor run `DELETE FROM events; DELETE FROM contact_messages;`
 
 ### [ ] 6. Check the Neon free-tier behavior
 Neon databases pause when idle, so the first request after a quiet period can take a couple of seconds. If that bothers you, nothing to fix now; just know it is expected.
+
+### [ ] 6b. Add the GitHub repository URL for each project
+Every project card has a GitHub icon at the top right. Until you set a repository URL it links to your GitHub profile (`https://github.com/karankhatri29`) as a fallback, which looks unfinished to a recruiter.
+1. Sign in as the owner and open `/admin`.
+2. Under **Projects**, choose **Edit** on each project and paste the exact repository link into **GitHub repository URL**. It must start with `https://github.com/` (for example `https://github.com/karankhatri29/your-repo`).
+3. Save, then reload `/` and click each card's GitHub icon to confirm it opens the right repo.
+4. Make sure each repository is public (or that you are happy for visitors to hit a 404 on a private one), and has a README that explains the project.
+Projects to do: Edge-Native Email Triage Framework, Context-Aware Recommendation Engine, Blockchain Based Marketplace, Smart Data Compression Algorithm.
+
+### [ ] 6c. Review the tools listed for each project and competency
+The skills graph links a competency to a tool, and a tool to a project, from the **Stack** field on each project and the **Tools** field on each competency (`/admin`). Claude filled these in from your project summaries only, so they are a first guess:
+- Recommendation Engine: Node.js, Google APIs
+- Blockchain Marketplace: React
+- Smart Data Compression: Bash, PostgreSQL
+- Add anything you genuinely used (for example Python, Solidity, Docker) and remove anything you could not discuss in an interview. Names must match the tool spelling under Competencies (case does not matter) for the link to appear.
 
 ---
 
@@ -73,12 +89,17 @@ Present since the start of the session, not made by Claude: deleted `.github/ski
 - If you ran a Speckit setup/upgrade command: keep these and commit them in their own commit.
 - If not: `git restore .github .specify` reverts them (check `git status` first so you don't lose anything you want).
 
-### [ ] 8. Personal contact details in source code
-`src/data/portfolio.ts` contains your phone number and Gmail address in git history and on the public site. If you would rather not publish the phone number, remove that entry from `contactLinks` (ask Claude to do it).
+### [x] 8. Phone number removed from the site (history still needs a decision)
+The phone number was removed from the contact list, footer and tests (2026-09-23), so new deploys no longer show it.
+**Still exposed:** the number is in git history (commit `2e53949`, message "add resume content and blog foundation") and that commit is already on `origin/master` of `https://github.com/karankhatri29/Portfolio`, which is a **public** repository. Anyone can still read it in the commit history, and it may be cached by forks, search engines or scrapers. Options, from least to most effort:
+1. Accept it: the number is only visible to someone digging through history. Change your number or rely on a spam-filtering app if that worries you.
+2. Make the repository private (GitHub > Settings > General > Danger Zone > Change visibility). This hides it from the public but not from anyone who already cloned or forked it. Vercel keeps working.
+3. Rewrite history to scrub it (`git filter-repo --replace-text`) and force-push. This is destructive and changes every commit hash; do it deliberately, on a fresh backup clone, and ask Claude to walk you through it. Forks and caches may still hold copies.
+Redeploy so the live site stops showing the number, and check `https://YOUR-DOMAIN` for `tel:` links afterward.
 
 ### [ ] 9. Two stale tests that were already failing
 Not caused by Phase 5, but they keep the test run red:
-- `src/components/CareerTimeline.test.tsx` expects "2024 - now" and "Independent engineer"; your real timeline data changed.
+- ~~`src/components/CareerTimeline.test.tsx` expected stale timeline data~~ (fixed when the interactive timeline was built).
 - `src/app/blog/[slug]/page.test.tsx` fails on an exact text match against the mocked Markdown output.
 Ask Claude to fix them.
 
@@ -92,8 +113,18 @@ Check the site at 375px, 768px and 1440px wide, and try keyboard-only navigation
 ### [ ] 11. Update the stale spec docs
 `plan.md` Phase 4 checkboxes are still unchecked even though the blog is built. Ask Claude to reconcile them.
 
-### [ ] 13. Decide how you want to be told about new messages
-Right now messages only appear in the dashboard, so you have to open `/admin/analytics` to see them (unread count shows in the summary). If you want an email when someone writes, tell Claude: it needs a mail service account (for example Resend, free tier) and an API key added to Vercel as an env var. Until then, check the dashboard regularly.
+### [ ] 13. Turn on email alerts (optional, about 10 minutes)
+The code is ready. It emails you when someone uses the contact form, and sends a weekly summary every Monday at 03:00 UTC. It stays silent until you do this:
+1. Create a free account at resend.com and sign up with the email address where you want the alerts.
+2. In Resend go to API Keys > Create API Key (sending access is enough). Copy it.
+3. In Vercel > Project > Settings > Environment Variables add, for Production:
+   - `RESEND_API_KEY` = the key
+   - `NOTIFY_EMAIL` = the same email you signed up to Resend with (the free default sender can only deliver to your own account email)
+   - `CRON_SECRET` = any long random string (for example from `openssl rand -base64 32`)
+   - `NOTIFY_FROM` is optional; only set it after verifying your own domain in Resend.
+4. Redeploy. Send a test message through the contact form and check your inbox (also check spam the first time).
+5. The weekly digest is scheduled in `vercel.json` (Mondays 03:00 UTC). To test it right away, in the Vercel dashboard open Settings > Cron Jobs and run `/api/cron/digest`.
+6. To disable alerts later, just delete `RESEND_API_KEY`.
 
 ### [ ] 14. Add a short privacy note to the site (recommended)
 The site now records page views without cookies and stores contact messages. A one-line note near the contact form or footer, such as "This site counts page views without cookies or personal identifiers. Messages you send are stored so I can reply.", is good practice. Ask Claude to add it.
@@ -108,3 +139,4 @@ Raw events grow over time. Neon's free tier is generous, but every few months yo
 - [x] `DATABASE_URL` added to local `.env.local`
 - [x] Tables created and seeded (`npm run db:migrate`)
 - [x] Analytics tables (`events`, `contact_messages`) created in Neon
+- [x] `tools`, `stack` and `github_url` columns added and backfilled (`npm run db:migrate`, run 2026-09-23)

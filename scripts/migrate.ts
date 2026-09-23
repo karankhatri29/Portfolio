@@ -47,9 +47,9 @@ async function main() {
 
   // Columns backing the skills graph: tools per competency, stack per project.
   await sql`ALTER TABLE projects ADD COLUMN IF NOT EXISTS stack JSONB NOT NULL DEFAULT '[]'::jsonb`;
+  await sql`ALTER TABLE projects ADD COLUMN IF NOT EXISTS github_url TEXT`;
   await sql`ALTER TABLE competencies ADD COLUMN IF NOT EXISTS tools JSONB NOT NULL DEFAULT '[]'::jsonb`;
 
-  const [{ count: projectCount }] = (await sql`SELECT COUNT(*)::int AS count FROM projects`) as { count: number }[];
   await sql`
     CREATE TABLE IF NOT EXISTS events (
       id BIGSERIAL PRIMARY KEY,
@@ -71,6 +71,7 @@ async function main() {
   await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS browser TEXT NOT NULL DEFAULT ''`;
   await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS duration_s INT NOT NULL DEFAULT 0`;
   await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS scroll_pct INT NOT NULL DEFAULT 0`;
+  await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS is_returning BOOLEAN NOT NULL DEFAULT false`;
   await sql`CREATE INDEX IF NOT EXISTS events_visitor_idx ON events (visitor_hash)`;
 
   await sql`
@@ -86,6 +87,7 @@ async function main() {
   `;
   await sql`CREATE INDEX IF NOT EXISTS contact_messages_created_idx ON contact_messages (created_at)`;
 
+  const [{ count: projectCount }] = (await sql`SELECT COUNT(*)::int AS count FROM projects`) as { count: number }[];
   if (projectCount === 0) {
     for (const project of seedProjects) {
       await sql`

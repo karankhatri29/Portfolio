@@ -4,10 +4,12 @@ const WIDTH = 640;
 const HEIGHT = 220;
 const PAD = { top: 12, right: 12, bottom: 28, left: 36 };
 
+// Picks an even axis maximum so the three tick labels (0, half, max) are always whole numbers.
 function niceMax(value: number) {
-  if (value <= 4) return 4;
+  if (value <= 10) return Math.max(4, Math.ceil(value / 2) * 2);
   const magnitude = 10 ** Math.floor(Math.log10(value));
-  return Math.ceil(value / magnitude) * magnitude;
+  const step = [1.2, 1.6, 2, 3, 4, 5, 6, 8, 10].find((candidate) => Math.round(candidate * magnitude) >= value) ?? 10;
+  return Math.round(step * magnitude);
 }
 
 function shortDate(day: string) {

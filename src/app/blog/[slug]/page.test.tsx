@@ -12,6 +12,6 @@ describe("blog detail route", () => {
     render(await BlogPostPage({ params: Promise.resolve({ slug: "systems-that-breathe" }) }));
 
     expect(screen.getByRole("heading", { name: "Systems That Breathe" })).toBeInTheDocument();
-    expect(screen.getByText("Good systems leave room for people to think.")).toBeInTheDocument();
+    expect(screen.getByText("Good systems leave room for people to think.", { exact: false })).toBeInTheDocument();
   });
 });

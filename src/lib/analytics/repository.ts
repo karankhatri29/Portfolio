@@ -1,14 +1,18 @@
 import { neon } from "@neondatabase/serverless";
 
 export type EventInput = {
-  type: "pageview" | "click";
+  type: "pageview" | "click" | "engagement";
   path: string;
   referrer: string;
   refTag: string;
   isEntry: boolean;
+  isReturning: boolean;
   country: string;
   city: string;
   device: string;
+  browser: string;
+  durationSeconds: number;
+  scrollPercent: number;
   visitorHash: string;
   target: string;
 };
@@ -33,6 +37,19 @@ export type BlogStat = PageStat & { previousViews: number };
 export type SourceStat = { source: string; visits: number; visitors: number };
 export type ContactClickStat = { target: string; clicks: number; visitors: number };
 export type BreakdownStat = { label: string; views: number };
+export type Funnel = { visitors: number; viewedProject: number; reachedOut: number };
+export type CampaignStat = { tag: string; visits: number; visitors: number; viewedProject: number; reachedOut: number };
+export type CountryStat = { country: string; views: number; visitors: number };
+export type CityStat = { city: string; country: string; views: number; visitors: number };
+export type EngagementStat = { path: string; avgSeconds: number; avgScroll: number; samples: number };
+export type EntryExitStat = { path: string; count: number };
+export type Behavior = {
+  entryPages: EntryExitStat[];
+  exitPages: EntryExitStat[];
+  bounce: { total: number; single: number };
+  audience: { newVisitors: number; returningVisitors: number };
+};
+export type RecentActivity = { at: string; kind: "pageview" | "click" | "message"; path: string; country: string; city: string; device: string; detail: string };
 
 export type DashboardData = {
   days: number;
@@ -43,6 +60,15 @@ export type DashboardData = {
   sources: SourceStat[];
   contactClicks: ContactClickStat[];
   messages: ContactMessage[];
+  funnel: Funnel;
+  campaigns: CampaignStat[];
+  countries: CountryStat[];
+  cities: CityStat[];
+  devices: BreakdownStat[];
+  browsers: BreakdownStat[];
+  engagement: EngagementStat[];
+  recent: RecentActivity[];
+  behavior: Behavior;
 };
 
 function sqlClient() {
@@ -54,8 +80,8 @@ function sqlClient() {
 export async function recordEvent(event: EventInput): Promise<void> {
   const sql = sqlClient();
   await sql`
-    INSERT INTO events (type, path, referrer, ref_tag, is_entry, country, city, device, visitor_hash, target)
-    VALUES (${event.type}, ${event.path}, ${event.referrer}, ${event.refTag}, ${event.isEntry}, ${event.country}, ${event.city}, ${event.device}, ${event.visitorHash}, ${event.target})
+    INSERT INTO events (type, path, referrer, ref_tag, is_entry, is_returning, country, city, device, browser, duration_s, scroll_pct, visitor_hash, target)
+    VALUES (${event.type}, ${event.path}, ${event.referrer}, ${event.refTag}, ${event.isEntry}, ${event.isReturning}, ${event.country}, ${event.city}, ${event.device}, ${event.browser}, ${event.durationSeconds}, ${event.scrollPercent}, ${event.visitorHash}, ${event.target})
   `;
 }
 
@@ -189,8 +215,166 @@ async function getContactClicks(days: number): Promise<ContactClickStat[]> {
   `) as ContactClickStat[];
 }
 
+async function getFunnel(days: number): Promise<Funnel> {
+  const sql = sqlClient();
+  const rows = (await sql`
+    WITH visitors AS (
+      SELECT DISTINCT visitor_hash FROM events
+      WHERE type = 'pageview' AND created_at >= now() - make_interval(days => ${days}::int)
+    ),
+    project_viewers AS (
+      SELECT DISTINCT visitor_hash FROM events
+      WHERE type = 'pageview' AND path LIKE '/projects/%' AND created_at >= now() - make_interval(days => ${days}::int)
+    ),
+    contacted AS (
+      SELECT visitor_hash FROM events WHERE type = 'click' AND created_at >= now() - make_interval(days => ${days}::int)
+      UNION
+      SELECT sender_hash FROM contact_messages WHERE created_at >= now() - make_interval(days => ${days}::int)
+    )
+    SELECT
+      (SELECT COUNT(*) FROM visitors)::int AS visitors,
+      (SELECT COUNT(*) FROM project_viewers)::int AS "viewedProject",
+      (SELECT COUNT(*) FROM contacted)::int AS "reachedOut"
+  `) as Funnel[];
+  return rows[0];
+}
+
+async function getCampaigns(days: number): Promise<CampaignStat[]> {
+  const sql = sqlClient();
+  return (await sql`
+    SELECT e.ref_tag AS tag, COUNT(*)::int AS visits, COUNT(DISTINCT e.visitor_hash)::int AS visitors,
+      COUNT(DISTINCT e.visitor_hash) FILTER (WHERE EXISTS (
+        SELECT 1 FROM events x WHERE x.visitor_hash = e.visitor_hash AND x.type = 'pageview' AND x.path LIKE '/projects/%'
+          AND x.created_at >= now() - make_interval(days => ${days}::int)
+      ))::int AS "viewedProject",
+      COUNT(DISTINCT e.visitor_hash) FILTER (WHERE EXISTS (
+        SELECT 1 FROM events x WHERE x.visitor_hash = e.visitor_hash AND x.type = 'click'
+          AND x.created_at >= now() - make_interval(days => ${days}::int)
+      ) OR EXISTS (
+        SELECT 1 FROM contact_messages m WHERE m.sender_hash = e.visitor_hash
+          AND m.created_at >= now() - make_interval(days => ${days}::int)
+      ))::int AS "reachedOut"
+    FROM events e
+    WHERE e.type = 'pageview' AND e.is_entry AND e.ref_tag <> '' AND e.created_at >= now() - make_interval(days => ${days}::int)
+    GROUP BY e.ref_tag ORDER BY visits DESC, tag ASC LIMIT 10
+  `) as CampaignStat[];
+}
+
+async function getCountries(days: number): Promise<CountryStat[]> {
+  const sql = sqlClient();
+  return (await sql`
+    SELECT country, COUNT(*)::int AS views, COUNT(DISTINCT visitor_hash)::int AS visitors
+    FROM events
+    WHERE type = 'pageview' AND country <> '' AND created_at >= now() - make_interval(days => ${days}::int)
+    GROUP BY country ORDER BY visitors DESC, views DESC LIMIT 10
+  `) as CountryStat[];
+}
+
+async function getCities(days: number): Promise<CityStat[]> {
+  const sql = sqlClient();
+  return (await sql`
+    SELECT city, country, COUNT(*)::int AS views, COUNT(DISTINCT visitor_hash)::int AS visitors
+    FROM events
+    WHERE type = 'pageview' AND city <> '' AND created_at >= now() - make_interval(days => ${days}::int)
+    GROUP BY city, country ORDER BY visitors DESC, views DESC LIMIT 10
+  `) as CityStat[];
+}
+
+async function getBreakdown(days: number, column: "device" | "browser"): Promise<BreakdownStat[]> {
+  const sql = sqlClient();
+  const rows = column === "device"
+    ? await sql`
+        SELECT COALESCE(NULLIF(device, ''), 'unknown') AS label, COUNT(*)::int AS views FROM events
+        WHERE type = 'pageview' AND created_at >= now() - make_interval(days => ${days}::int) GROUP BY 1 ORDER BY views DESC`
+    : await sql`
+        SELECT COALESCE(NULLIF(browser, ''), 'unknown') AS label, COUNT(*)::int AS views FROM events
+        WHERE type = 'pageview' AND created_at >= now() - make_interval(days => ${days}::int) GROUP BY 1 ORDER BY views DESC`;
+  return rows as BreakdownStat[];
+}
+
+async function getEngagement(days: number): Promise<EngagementStat[]> {
+  const sql = sqlClient();
+  return (await sql`
+    SELECT path, ROUND(AVG(duration_s))::int AS "avgSeconds", ROUND(AVG(scroll_pct))::int AS "avgScroll", COUNT(*)::int AS samples
+    FROM events
+    WHERE type = 'engagement' AND duration_s > 0 AND created_at >= now() - make_interval(days => ${days}::int)
+    GROUP BY path
+  `) as EngagementStat[];
+}
+
+async function getRecent(): Promise<RecentActivity[]> {
+  const sql = sqlClient();
+  return (await sql`
+    SELECT to_char(activity.at AT TIME ZONE 'utc', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS at, activity.kind, activity.path, activity.country, activity.city, activity.device, activity.detail
+    FROM (
+      SELECT created_at AS at, type AS kind, path, country, city, device, target AS detail FROM events WHERE type IN ('pageview', 'click')
+      UNION ALL
+      SELECT created_at, 'message', '', '', '', '', name FROM contact_messages
+    ) activity
+    ORDER BY activity.at DESC LIMIT 20
+  `) as RecentActivity[];
+}
+
+async function getBehavior(days: number): Promise<Behavior> {
+  const sql = sqlClient();
+  const entryPages = (await sql`
+    SELECT path, COUNT(*)::int AS count FROM events
+    WHERE type = 'pageview' AND is_entry AND created_at >= now() - make_interval(days => ${days}::int)
+    GROUP BY path ORDER BY count DESC, path ASC LIMIT 8
+  `) as EntryExitStat[];
+
+  const exitPages = (await sql`
+    SELECT path, COUNT(*)::int AS count FROM (
+      SELECT DISTINCT ON (visitor_hash) path FROM events
+      WHERE type = 'pageview' AND created_at >= now() - make_interval(days => ${days}::int)
+      ORDER BY visitor_hash, created_at DESC
+    ) last_pages
+    GROUP BY path ORDER BY count DESC, path ASC LIMIT 8
+  `) as EntryExitStat[];
+
+  const bounce = (await sql`
+    SELECT COUNT(*)::int AS total, COUNT(*) FILTER (WHERE views = 1)::int AS single FROM (
+      SELECT visitor_hash, COUNT(*) AS views FROM events
+      WHERE type = 'pageview' AND created_at >= now() - make_interval(days => ${days}::int)
+      GROUP BY visitor_hash
+    ) per_visitor
+  `) as { total: number; single: number }[];
+
+  const audience = (await sql`
+    SELECT COUNT(DISTINCT visitor_hash) FILTER (WHERE NOT is_returning)::int AS "newVisitors",
+      COUNT(DISTINCT visitor_hash) FILTER (WHERE is_returning)::int AS "returningVisitors"
+    FROM events
+    WHERE type = 'pageview' AND is_entry AND created_at >= now() - make_interval(days => ${days}::int)
+  `) as { newVisitors: number; returningVisitors: number }[];
+
+  return { entryPages, exitPages, bounce: bounce[0], audience: audience[0] };
+}
+
+export const EVENT_EXPORT_COLUMNS = ["time_utc", "type", "path", "referrer", "campaign", "is_entry", "returning_browser", "country", "city", "device", "browser", "reading_seconds", "scroll_percent", "contact_target"];
+export const MESSAGE_EXPORT_COLUMNS = ["time_utc", "name", "email", "message", "status"];
+
+export async function exportEvents(days: number): Promise<(string | number | boolean)[][]> {
+  const sql = sqlClient();
+  const rows = (await sql`
+    SELECT to_char(created_at AT TIME ZONE 'utc', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS time_utc, type, path, referrer, ref_tag, is_entry, is_returning,
+      country, city, device, browser, duration_s, scroll_pct, target
+    FROM events WHERE created_at >= now() - make_interval(days => ${days}::int)
+    ORDER BY created_at DESC LIMIT 50000
+  `) as Record<string, string | number | boolean>[];
+  return rows.map((row) => ["time_utc", "type", "path", "referrer", "ref_tag", "is_entry", "is_returning", "country", "city", "device", "browser", "duration_s", "scroll_pct", "target"].map((key) => row[key]));
+}
+
+export async function exportMessages(): Promise<string[][]> {
+  const sql = sqlClient();
+  const rows = (await sql`
+    SELECT to_char(created_at AT TIME ZONE 'utc', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS time_utc, name, email, message, status
+    FROM contact_messages ORDER BY created_at DESC LIMIT 5000
+  `) as Record<string, string>[];
+  return rows.map((row) => [row.time_utc, row.name, row.email, row.message, row.status]);
+}
+
 export async function getDashboardData(days: number): Promise<DashboardData> {
-  const [summary, daily, topPages, blog, sources, contactClicks, messages] = await Promise.all([
+  const [summary, daily, topPages, blog, sources, contactClicks, messages, funnel, campaigns, countries, cities, devices, browsers, engagement, recent, behavior] = await Promise.all([
     getSummary(days),
     getDaily(days),
     getTopPages(days),
@@ -198,7 +382,16 @@ export async function getDashboardData(days: number): Promise<DashboardData> {
     getSources(days),
     getContactClicks(days),
     listMessages(),
+    getFunnel(days),
+    getCampaigns(days),
+    getCountries(days),
+    getCities(days),
+    getBreakdown(days, "device"),
+    getBreakdown(days, "browser"),
+    getEngagement(days),
+    getRecent(),
+    getBehavior(days),
   ]);
 
-  return { days, summary, daily, topPages, blog, sources, contactClicks, messages };
+  return { days, summary, daily, topPages, blog, sources, contactClicks, messages, funnel, campaigns, countries, cities, devices, browsers, engagement, recent, behavior };
 }

@@ -12,7 +12,7 @@ export function BarList({ items, emptyText, unit }: { items: BarItem[]; emptyTex
           <div className="flex items-baseline justify-between gap-4 text-sm">
             <span className="min-w-0 truncate font-medium">{item.label}</span>
             <span className="shrink-0 tabular-nums text-muted">
-              {item.value.toLocaleString("en-US")} {unit}
+              {item.value.toLocaleString("en-US")} {item.value === 1 ? unit.replace(/s$/, "") : unit}
               {item.detail ? ` · ${item.detail}` : ""}
             </span>
           </div>

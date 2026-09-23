@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { countRecentMessages, createMessage } from "@/lib/analytics/repository";
 import { visitorHash } from "@/lib/analytics/tracking";
+import { sendEmail } from "@/lib/notify/email";
 import { validateContactInput } from "@/lib/contact/validation";
 
 const MAX_MESSAGES_PER_WINDOW = 3;
@@ -32,6 +33,13 @@ export async function POST(request: Request) {
     }
 
     await createMessage({ ...result.data, senderHash });
+
+    // Best effort: the message is already saved, so a mail problem must not fail the request.
+    await sendEmail({
+      subject: `New portfolio message from ${result.data.name}`,
+      text: `${result.data.name} <${result.data.email}> wrote:\n\n${result.data.message}\n\nReply to them directly, or manage messages at ${new URL(request.url).origin}/admin/analytics`,
+    });
+
     return NextResponse.json({ ok: true }, { status: 201 });
   } catch (error) {
     console.error("contact route failed", error);

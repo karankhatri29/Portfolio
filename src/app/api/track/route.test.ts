@@ -38,10 +38,43 @@ describe("/api/track", () => {
     expect(JSON.stringify(event)).not.toContain("1.2.3.4");
   });
 
+  it("records whether an entry pageview is from a returning browser", async () => {
+    await track({ type: "pageview", path: "/", isEntry: true, returning: true });
+    await track({ type: "pageview", path: "/", isEntry: true });
+    await track({ type: "pageview", path: "/", isEntry: false, returning: true });
+
+    expect(mockRecord.mock.calls.map(([event]) => event.isReturning)).toEqual([true, false, false]);
+  });
+
   it("drops referrer and campaign data on non-entry pageviews", async () => {
     await track({ type: "pageview", path: "/", isEntry: false, referrer: "https://linkedin.com", ref: "x" });
 
     expect(mockRecord.mock.calls[0][0]).toMatchObject({ referrer: "", refTag: "", isEntry: false });
+  });
+
+  it("records the browser on pageviews", async () => {
+    await track({ type: "pageview", path: "/" });
+
+    expect(mockRecord.mock.calls[0][0]).toMatchObject({ browser: "Chrome", durationSeconds: 0, scrollPercent: 0 });
+  });
+
+  it("records reading time and scroll depth for engagement events", async () => {
+    await track({ type: "engagement", path: "/blog/hello", duration: 74.4, scroll: 80 });
+
+    expect(mockRecord.mock.calls[0][0]).toMatchObject({ type: "engagement", path: "/blog/hello", durationSeconds: 74, scrollPercent: 80, isEntry: false, target: "", referrer: "" });
+  });
+
+  it.each([
+    ["a zero duration", { duration: 0, scroll: 50 }],
+    ["an absurd duration", { duration: 99999, scroll: 50 }],
+    ["a scroll over 100", { duration: 10, scroll: 150 }],
+    ["missing numbers", {}],
+    ["string numbers", { duration: "10", scroll: "50" }],
+  ])("ignores engagement with %s", async (_label, extra) => {
+    const response = await track({ type: "engagement", path: "/blog/hello", ...extra });
+
+    expect(response.status).toBe(204);
+    expect(mockRecord).not.toHaveBeenCalled();
   });
 
   it("records an allowed contact click", async () => {
