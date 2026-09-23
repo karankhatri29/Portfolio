@@ -61,13 +61,13 @@ export function HeroSection({ content }: { content: PortfolioContent }) {
           <div aria-hidden="true" className="absolute inset-0 translate-x-3 translate-y-3 border border-accent/40 lg:translate-x-4 lg:translate-y-4" />
           <figure className="relative aspect-[3/4] w-full overflow-hidden border border-ink/10 bg-ink/5">
             <Image
-              src="/karan-khatri.webp"
+              src="/karan-khatri.png"
               alt={`${content.name} smiling, in a black suit and tie, standing on a lawn`}
               width={719}
               height={959}
               priority
-              sizes="(min-width: 1024px) 30vw, 24rem"
-              className="h-full w-full origin-[50%_35%] translate-x-[6%] scale-[1.3] object-cover"
+              unoptimized
+              className="h-full w-full object-cover object-[50%_20%]"
             />
             <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-paper/80 to-transparent" />
           </figure>
