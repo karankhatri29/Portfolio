@@ -45,9 +45,23 @@ describe("ProjectShowcase", () => {
     const next = screen.getByRole("button", { name: "Next projects" });
     await waitFor(() => expect(next).toBeEnabled());
     expect(screen.getByRole("button", { name: "Previous projects" })).toBeDisabled();
+
+    // The custom progress line replaces the native scrollbar and reflects how much of the row is visible.
+    const thumb = screen.getByTestId("scroll-progress-thumb");
+    expect(thumb.style.left).toBe("0%");
+    expect(parseFloat(thumb.style.width)).toBeCloseTo(33.3, 0);
+
     await user.click(next);
     expect(scrollBy).toHaveBeenCalledWith(expect.objectContaining({ left: expect.any(Number) }));
     expect(scrollBy.mock.calls[0][0].left).toBeGreaterThan(0);
+  });
+
+  it("hides the native scrollbar", () => {
+    render(<ProjectShowcase projects={projects} />);
+
+    const region = screen.getByRole("region", { name: /scrolls horizontally/i });
+    expect(region.className).toContain("[scrollbar-width:none]");
+    expect(region.className).toContain("[&::-webkit-scrollbar]:hidden");
   });
 
   it("has a work anchor for the navigation and a placeholder when empty", () => {

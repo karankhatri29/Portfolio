@@ -17,12 +17,17 @@ const control = "flex h-11 w-11 items-center justify-center rounded-full border 
 
 export function ProjectShowcase({ projects, fallbackGithubUrl }: { projects: Project[]; fallbackGithubUrl?: string }) {
   const scroller = useRef<HTMLDivElement>(null);
-  const [edges, setEdges] = useState({ start: true, end: false });
+  const [edges, setEdges] = useState({ start: true, end: false, thumbLeft: 0, thumbWidth: 1 });
 
   useEffect(() => {
     const element = scroller.current;
     if (!element) return;
-    const update = () => setEdges({ start: element.scrollLeft <= 4, end: element.scrollLeft + element.clientWidth >= element.scrollWidth - 4 });
+    const update = () => {
+      const overflow = element.scrollWidth - element.clientWidth;
+      const thumbWidth = element.scrollWidth > 0 ? Math.min(1, Math.max(0.1, element.clientWidth / element.scrollWidth)) : 1;
+      const thumbLeft = overflow > 0 ? Math.min(1, Math.max(0, element.scrollLeft / overflow)) * (1 - thumbWidth) : 0;
+      setEdges({ start: element.scrollLeft <= 4, end: element.scrollLeft + element.clientWidth >= element.scrollWidth - 4, thumbLeft, thumbWidth });
+    };
     const frame = window.requestAnimationFrame(update);
     element.addEventListener("scroll", update, { passive: true });
     window.addEventListener("resize", update);
@@ -61,7 +66,7 @@ export function ProjectShowcase({ projects, fallbackGithubUrl }: { projects: Pro
           role="region"
           aria-label="Selected projects, scrolls horizontally"
           tabIndex={0}
-          className={`mt-10 snap-x snap-mandatory overflow-x-auto pb-4 [scrollbar-width:thin] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${edges.end ? "" : "[mask-image:linear-gradient(to_right,black_90%,transparent)]"}`}
+          className={`mt-10 snap-x snap-mandatory overflow-x-auto pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${edges.end ? "" : "[mask-image:linear-gradient(to_right,black_90%,transparent)]"}`}
         >
           <ul className="flex gap-5">
             {projects.map((project) => (
@@ -72,6 +77,14 @@ export function ProjectShowcase({ projects, fallbackGithubUrl }: { projects: Pro
           </ul>
         </div>
       ) : <p className="mt-8 text-muted">Projects coming soon.</p>}
+
+      {projects.length && edges.thumbWidth < 0.999 ? (
+        <div aria-hidden="true" data-testid="scroll-progress" className="mt-2 h-px w-full bg-ink/15">
+          <div className="relative h-full">
+            <div data-testid="scroll-progress-thumb" className="absolute -top-px h-0.5 rounded-full bg-accent transition-[left] duration-150" style={{ left: `${edges.thumbLeft * 100}%`, width: `${edges.thumbWidth * 100}%` }} />
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
