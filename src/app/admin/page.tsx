@@ -3,12 +3,12 @@ import Link from "next/link";
 import { auth } from "@/auth";
 import { AdminGate } from "@/components/AdminGate";
 import { ContentEditor } from "@/components/ContentEditor";
-import { listProjects, listSkills } from "@/lib/content/repository";
+import { listHighlights, listProjects, listSkills } from "@/lib/content/repository";
 
 export default async function AdminPage() {
   const session = await auth();
   const isAdmin = session?.role === "Admin";
-  const [projects, skills] = isAdmin ? await Promise.all([listProjects(), listSkills()]) : [[], []];
+  const [projects, skills, highlights] = isAdmin ? await Promise.all([listProjects(), listSkills(), listHighlights()]) : [[], [], []];
 
   return (
     <main className="mx-auto max-w-4xl px-5 py-20 lg:px-8 lg:py-32">
@@ -17,7 +17,7 @@ export default async function AdminPage() {
       {isAdmin ? <p className="mt-6"><Link href="/admin/analytics" className="text-sm font-semibold text-accent underline underline-offset-4">View analytics</Link></p> : null}
       <div className="mt-14">
         <AdminGate session={session}>
-          <ContentEditor initialProjects={projects} initialSkills={skills} />
+          <ContentEditor initialProjects={projects} initialSkills={skills} initialHighlights={highlights} />
         </AdminGate>
       </div>
     </main>

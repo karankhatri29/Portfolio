@@ -77,6 +77,12 @@ describe("/api/track", () => {
     expect(mockRecord).not.toHaveBeenCalled();
   });
 
+  it("records a booking click as a contact action", async () => {
+    await track({ type: "click", path: "/", target: "booking" });
+
+    expect(mockRecord.mock.calls[0][0]).toMatchObject({ type: "click", target: "booking" });
+  });
+
   it("records an allowed contact click", async () => {
     await track({ type: "click", path: "/", target: "email" });
 

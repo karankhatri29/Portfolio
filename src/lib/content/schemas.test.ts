@@ -60,3 +60,46 @@ describe("validateSkillInput", () => {
     if (!result.valid) expect(result.errors).toContain("description is required");
   });
 });
+
+describe("case study fields", () => {
+  const base = { slug: "alpha", title: "Alpha", year: "2026", summary: "s", role: "r", outcomes: ["o"] };
+
+  it("accepts and trims the optional story, links and images", () => {
+    const result = validateProjectInput({
+      ...base,
+      problem: "  Emails pile up ",
+      approach: "Graph the obligations",
+      result: "Half the triage time",
+      liveUrl: "https://demo.example.com/app",
+      videoUrl: "https://www.youtube.com/watch?v=abc",
+      images: [{ url: "https://cdn.example.com/a.png", alt: " Dashboard screenshot " }],
+    });
+
+    expect(result).toMatchObject({
+      valid: true,
+      data: { problem: "Emails pile up", liveUrl: "https://demo.example.com/app", images: [{ url: "https://cdn.example.com/a.png", alt: "Dashboard screenshot" }] },
+    });
+  });
+
+  it("stays valid without any of them", () => {
+    expect(validateProjectInput(base).valid).toBe(true);
+  });
+
+  it.each([
+    ["a non-https live link", { liveUrl: "http://demo.example.com" }, "liveUrl must be an https link"],
+    ["a javascript link", { videoUrl: "javascript:alert(1)" }, "videoUrl must be an https link"],
+    ["an oversized story", { problem: "x".repeat(2001) }, "problem must be text of at most 2000 characters"],
+    ["an image without alt text", { images: [{ url: "https://cdn.example.com/a.png", alt: "" }] }, "every image needs a short description (alt text)"],
+    ["an image with a bad link", { images: [{ url: "/local.png", alt: "x" }] }, "every image needs an https link"],
+    ["too many images", { images: Array.from({ length: 9 }, () => ({ url: "https://cdn.example.com/a.png", alt: "x" })) }, "images must be a list of at most 8 items"],
+  ])("rejects %s", (_label, extra, message) => {
+    const result = validateProjectInput({ ...base, ...extra });
+
+    expect(result.valid).toBe(false);
+    if (!result.valid) expect(result.errors).toContain(message);
+  });
+
+  it("allows clearing a link with an empty string", () => {
+    expect(validateProjectInput({ ...base, liveUrl: "" })).toMatchObject({ valid: true, data: { liveUrl: "" } });
+  });
+});

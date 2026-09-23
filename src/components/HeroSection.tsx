@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import type { CSSProperties } from "react";
 
 import type { PortfolioContent, TerminalLine } from "@/data/portfolio";
@@ -46,7 +47,7 @@ function TerminalCard({ lines }: { lines: TerminalLine[] }) {
   );
 }
 
-export function HeroSection({ content }: { content: PortfolioContent }) {
+export function HeroSection({ content, bookingUrl }: { content: PortfolioContent; bookingUrl?: string }) {
   const [role, ...rest] = content.headline.split(/(?<=\.)\s+/);
   const claim = rest.join(" ");
 
@@ -56,6 +57,17 @@ export function HeroSection({ content }: { content: PortfolioContent }) {
         <p className="mb-5 text-sm font-semibold uppercase tracking-[0.2em] text-accent">{content.eyebrow}</p>
         <h1 id="hero-title" className="max-w-3xl font-display text-5xl font-semibold leading-[0.95] tracking-tight sm:text-7xl">{claim ? <><span className="block text-accent">{role}</span>{" "}<span className="block">{claim}</span></> : content.headline}</h1>
         <p className="mt-8 max-w-xl text-lg leading-8 text-muted">{content.summary}</p>
+        {content.availability?.open ? (
+          <p className="mt-6 inline-flex items-center gap-2 border border-accent/40 px-3 py-1 text-sm font-medium">
+            <span aria-hidden="true" className="h-2 w-2 rounded-full bg-green-500" />
+            {content.availability.label}
+          </p>
+        ) : null}
+        <div className="mt-8 flex flex-wrap items-center gap-3">
+          <a href="#contact" className="bg-accent px-5 py-2.5 text-sm font-semibold text-paper transition hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper">Get in touch</a>
+          <Link href="/resume" className="border border-ink/30 px-5 py-2.5 text-sm font-semibold transition hover:border-accent hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">View resume</Link>
+          {bookingUrl ? <a href={bookingUrl} target="_blank" rel="noopener noreferrer" data-track="booking" className="border border-ink/30 px-5 py-2.5 text-sm font-semibold transition hover:border-accent hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">Book a call</a> : null}
+        </div>
         <p className="mt-6 max-w-sm border-l border-accent/50 pl-6 text-sm leading-7 text-muted">Selected work, field notes, and practical ideas for making digital products feel more human.</p>
       </div>
 

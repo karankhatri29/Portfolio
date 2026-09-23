@@ -48,6 +48,12 @@ async function main() {
   // Columns backing the skills graph: tools per competency, stack per project.
   await sql`ALTER TABLE projects ADD COLUMN IF NOT EXISTS stack JSONB NOT NULL DEFAULT '[]'::jsonb`;
   await sql`ALTER TABLE projects ADD COLUMN IF NOT EXISTS github_url TEXT`;
+  await sql`ALTER TABLE projects ADD COLUMN IF NOT EXISTS problem TEXT`;
+  await sql`ALTER TABLE projects ADD COLUMN IF NOT EXISTS approach TEXT`;
+  await sql`ALTER TABLE projects ADD COLUMN IF NOT EXISTS result TEXT`;
+  await sql`ALTER TABLE projects ADD COLUMN IF NOT EXISTS live_url TEXT`;
+  await sql`ALTER TABLE projects ADD COLUMN IF NOT EXISTS video_url TEXT`;
+  await sql`ALTER TABLE projects ADD COLUMN IF NOT EXISTS images JSONB NOT NULL DEFAULT '[]'::jsonb`;
   await sql`ALTER TABLE competencies ADD COLUMN IF NOT EXISTS tools JSONB NOT NULL DEFAULT '[]'::jsonb`;
 
   await sql`
@@ -99,6 +105,18 @@ async function main() {
     )
   `;
   await sql`CREATE INDEX IF NOT EXISTS error_logs_created_idx ON error_logs (created_at)`;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS highlights (
+      id TEXT PRIMARY KEY,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      kind TEXT NOT NULL,
+      title TEXT NOT NULL,
+      subtitle TEXT NOT NULL DEFAULT '',
+      body TEXT NOT NULL DEFAULT '',
+      url TEXT
+    )
+  `;
 
   const [{ count: projectCount }] = (await sql`SELECT COUNT(*)::int AS count FROM projects`) as { count: number }[];
   if (projectCount === 0) {

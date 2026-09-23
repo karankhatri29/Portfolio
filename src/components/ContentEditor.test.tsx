@@ -84,7 +84,7 @@ describe("project editing", () => {
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe("/api/projects");
     expect(init.method).toBe("POST");
-    expect(JSON.parse(init.body)).toEqual({ slug: "new-project", title: "New Project", year: "2026", role: "Builder", summary: "Brand new.", outcomes: ["Did a thing", "Did another"], stack: [], githubUrl: "" });
+    expect(JSON.parse(init.body)).toMatchObject({ slug: "new-project", title: "New Project", year: "2026", role: "Builder", summary: "Brand new.", outcomes: ["Did a thing", "Did another"], stack: [], githubUrl: "" });
   });
 
   it("shows validation errors from the server and keeps the list unchanged", async () => {
@@ -197,5 +197,99 @@ describe("competency editing", () => {
 
     expect(await screen.findByText("Competency deleted.")).toBeInTheDocument();
     expect(screen.getByText("No competencies yet.")).toBeInTheDocument();
+  });
+});
+
+describe("case study editing", () => {
+  it("sends the story, links and parsed screenshots with a project", async () => {
+    const user = userEvent.setup();
+    fetchMock.mockReturnValue(reply(200, { project }));
+    renderEditor();
+
+    await user.click(screen.getByRole("button", { name: "Edit Existing Project" }));
+    await user.type(screen.getByLabelText("The problem"), "Slow triage");
+    await user.type(screen.getByLabelText("Live demo URL"), "https://demo.example.com");
+    await user.type(screen.getByLabelText(/Screenshots/), "https://cdn.example.com/a.png | Dashboard view{enter}https://cdn.example.com/b.png | Graph | with pipe");
+    await user.click(screen.getByRole("button", { name: "Save project" }));
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.problem).toBe("Slow triage");
+    expect(body.liveUrl).toBe("https://demo.example.com");
+    expect(body.images).toEqual([
+      { url: "https://cdn.example.com/a.png", alt: "Dashboard view" },
+      { url: "https://cdn.example.com/b.png", alt: "Graph | with pipe" },
+    ]);
+  });
+
+  it("loads existing case study fields when editing", async () => {
+    const user = userEvent.setup();
+    render(<ContentEditor initialProjects={[{ ...project, approach: "Graph it", images: [{ url: "https://cdn.example.com/a.png", alt: "Shot" }] }]} initialSkills={[]} />);
+
+    await user.click(screen.getByRole("button", { name: "Edit Existing Project" }));
+
+    expect(screen.getByLabelText("The approach")).toHaveValue("Graph it");
+    expect(screen.getByLabelText(/Screenshots/)).toHaveValue("https://cdn.example.com/a.png | Shot");
+  });
+});
+
+describe("testimonial and publication editing", () => {
+  const entry = { id: "h1", kind: "testimonial" as const, title: "Ada Lovelace", subtitle: "Manager, Analytical Co", body: "Karan shipped it early.", url: "https://linkedin.com/in/ada" };
+
+  function renderWithEntry() {
+    return render(<ContentEditor initialProjects={[]} initialSkills={[]} initialHighlights={[entry]} />);
+  }
+
+  it("creates a testimonial and adds it to the list", async () => {
+    const user = userEvent.setup();
+    fetchMock.mockReturnValue(reply(201, { highlight: { ...entry, id: "h2", title: "Grace Hopper" } }));
+    render(<ContentEditor initialProjects={[]} initialSkills={[]} />);
+
+    await user.type(screen.getByLabelText("Person's name"), "Grace Hopper");
+    await user.type(screen.getByLabelText("What they said (the quote)"), "A joy to work with.");
+    await user.click(screen.getByRole("button", { name: "Create entry" }));
+
+    expect(await screen.findByText("Entry created.")).toBeInTheDocument();
+    expect(screen.getByText("Grace Hopper")).toBeInTheDocument();
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("/api/highlights");
+    expect(JSON.parse(init.body)).toMatchObject({ kind: "testimonial", title: "Grace Hopper", body: "A joy to work with." });
+  });
+
+  it("relabels the fields for publications", async () => {
+    const user = userEvent.setup();
+    render(<ContentEditor initialProjects={[]} initialSkills={[]} />);
+
+    await user.selectOptions(screen.getByLabelText("Type"), "publication");
+
+    expect(screen.getByLabelText("Paper or article title")).toBeInTheDocument();
+    expect(screen.getByLabelText("Venue and year")).toBeInTheDocument();
+    expect(screen.getByLabelText("Short summary (optional)")).toBeInTheDocument();
+  });
+
+  it("edits by id and shows validation errors from the server", async () => {
+    const user = userEvent.setup();
+    fetchMock.mockReturnValue(reply(400, { errors: ["a testimonial needs the quote text"] }));
+    renderWithEntry();
+
+    await user.click(screen.getByRole("button", { name: "Edit Ada Lovelace" }));
+    await user.clear(screen.getByLabelText("What they said (the quote)"));
+    await user.click(screen.getByRole("button", { name: "Save entry" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("a testimonial needs the quote text");
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({ id: "h1", kind: "testimonial" });
+    expect(fetchMock.mock.calls[0][1].method).toBe("PATCH");
+  });
+
+  it("deletes after confirmation", async () => {
+    const user = userEvent.setup();
+    fetchMock.mockReturnValue(reply(200, { ok: true }));
+    renderWithEntry();
+
+    await user.click(screen.getByRole("button", { name: "Delete Ada Lovelace" }));
+    expect(fetchMock).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Confirm delete Ada Lovelace" }));
+
+    expect(await screen.findByText("Entry deleted.")).toBeInTheDocument();
+    expect(screen.getByText("No entries yet.")).toBeInTheDocument();
   });
 });

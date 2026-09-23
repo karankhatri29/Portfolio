@@ -25,6 +25,28 @@ describe("HeroSection", () => {
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("One sentence only.");
   });
 
+  it("shows an availability badge only while open, and hides it when closed", () => {
+    const { rerender } = render(<HeroSection content={portfolioContent} />);
+    expect(screen.getByText(portfolioContent.availability!.label)).toBeInTheDocument();
+
+    rerender(<HeroSection content={{ ...portfolioContent, availability: { open: false, label: "Not looking" } }} />);
+    expect(screen.queryByText("Not looking")).not.toBeInTheDocument();
+  });
+
+  it("offers clear calls to action, and a booking link only when one is configured", () => {
+    const { rerender } = render(<HeroSection content={portfolioContent} />);
+    expect(screen.getByRole("link", { name: "Get in touch" })).toHaveAttribute("href", "#contact");
+    expect(screen.getByRole("link", { name: "View resume" })).toHaveAttribute("href", "/resume");
+    expect(screen.queryByRole("link", { name: "Book a call" })).not.toBeInTheDocument();
+
+    rerender(<HeroSection content={portfolioContent} bookingUrl="https://cal.com/karan/intro" />);
+    const booking = screen.getByRole("link", { name: "Book a call" });
+    expect(booking).toHaveAttribute("href", "https://cal.com/karan/intro");
+    expect(booking).toHaveAttribute("target", "_blank");
+    expect(booking).toHaveAttribute("rel", "noopener noreferrer");
+    expect(booking).toHaveAttribute("data-track", "booking");
+  });
+
   it("shows a described portrait", () => {
     render(<HeroSection content={portfolioContent} />);
 

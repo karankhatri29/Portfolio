@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 
-import type { Project, SkillRecord } from "@/lib/content/repository";
+import type { Highlight, HighlightKind, Project, SkillRecord } from "@/lib/content/repository";
 
 type Status =
   | { kind: "idle" }
@@ -46,7 +46,14 @@ function StatusMessage({ status }: { status: Status }) {
   );
 }
 
-const emptyProject = { slug: "", title: "", year: "", role: "", summary: "", outcomes: "", stack: "", githubUrl: "" };
+const emptyProject = { slug: "", title: "", year: "", role: "", summary: "", outcomes: "", stack: "", githubUrl: "", problem: "", approach: "", result: "", liveUrl: "", videoUrl: "", images: "" };
+
+function parseImages(text: string) {
+  return splitList(text, "\n").map((line) => {
+    const [url, ...alt] = line.split("|");
+    return { url: url.trim(), alt: alt.join("|").trim() };
+  });
+}
 const splitList = (value: string, separator: string) => value.split(separator).map((item) => item.trim()).filter(Boolean);
 
 function ProjectEditor({ initialProjects }: { initialProjects: Project[] }) {
@@ -60,7 +67,7 @@ function ProjectEditor({ initialProjects }: { initialProjects: Project[] }) {
   function startEdit(project: Project) {
     setEditingSlug(project.slug);
     setConfirmingSlug(null);
-    setForm({ ...project, outcomes: project.outcomes.join("\n"), stack: (project.stack ?? []).join(", "), githubUrl: project.githubUrl ?? "" });
+    setForm({ ...project, outcomes: project.outcomes.join("\n"), stack: (project.stack ?? []).join(", "), githubUrl: project.githubUrl ?? "", problem: project.problem ?? "", approach: project.approach ?? "", result: project.result ?? "", liveUrl: project.liveUrl ?? "", videoUrl: project.videoUrl ?? "", images: (project.images ?? []).map((image) => `${image.url} | ${image.alt}`).join("\n") });
     setStatus({ kind: "idle" });
   }
 
@@ -72,7 +79,7 @@ function ProjectEditor({ initialProjects }: { initialProjects: Project[] }) {
   async function submit(event: FormEvent) {
     event.preventDefault();
     setStatus({ kind: "pending" });
-    const payload = { ...form, outcomes: splitList(form.outcomes, "\n"), stack: splitList(form.stack, ",") };
+    const payload = { ...form, outcomes: splitList(form.outcomes, "\n"), stack: splitList(form.stack, ","), images: parseImages(form.images) };
     const result = await send(editingSlug ? "PATCH" : "POST", "/api/projects", payload);
     if (!result.ok) return setStatus(result.status);
 
@@ -138,6 +145,27 @@ function ProjectEditor({ initialProjects }: { initialProjects: Project[] }) {
         <label className="block text-sm font-medium">GitHub repository URL
           <input className={inputClass} type="url" placeholder="https://github.com/you/repo" value={form.githubUrl} onChange={(event) => setForm({ ...form, githubUrl: event.target.value })} />
         </label>
+        <fieldset className="grid gap-4 border border-ink/10 p-4">
+          <legend className="px-2 text-sm font-semibold">Case study (optional)</legend>
+          <label className="block text-sm font-medium">The problem
+            <textarea className={inputClass} rows={3} value={form.problem} onChange={(event) => setForm({ ...form, problem: event.target.value })} />
+          </label>
+          <label className="block text-sm font-medium">The approach
+            <textarea className={inputClass} rows={3} value={form.approach} onChange={(event) => setForm({ ...form, approach: event.target.value })} />
+          </label>
+          <label className="block text-sm font-medium">The result
+            <textarea className={inputClass} rows={3} value={form.result} onChange={(event) => setForm({ ...form, result: event.target.value })} />
+          </label>
+          <label className="block text-sm font-medium">Live demo URL
+            <input className={inputClass} type="url" placeholder="https://" value={form.liveUrl} onChange={(event) => setForm({ ...form, liveUrl: event.target.value })} />
+          </label>
+          <label className="block text-sm font-medium">Demo video URL
+            <input className={inputClass} type="url" placeholder="https://" value={form.videoUrl} onChange={(event) => setForm({ ...form, videoUrl: event.target.value })} />
+          </label>
+          <label className="block text-sm font-medium">Screenshots (one per line: https link | short description)
+            <textarea className={inputClass} rows={4} placeholder="https://.../dashboard.png | Dashboard showing the email graph" value={form.images} onChange={(event) => setForm({ ...form, images: event.target.value })} />
+          </label>
+        </fieldset>
         <div className="flex flex-wrap items-center gap-4">
           <button type="submit" className={primaryButton} disabled={pending}>{editingSlug ? "Save project" : "Create project"}</button>
           {editingSlug ? <button type="button" className={linkButton} onClick={reset}>Cancel edit</button> : null}
@@ -234,11 +262,113 @@ function SkillEditor({ initialSkills }: { initialSkills: SkillRecord[] }) {
   );
 }
 
-export function ContentEditor({ initialProjects, initialSkills }: { initialProjects: Project[]; initialSkills: SkillRecord[] }) {
+const emptyHighlight = { kind: "testimonial" as HighlightKind, title: "", subtitle: "", body: "", url: "" };
+
+const highlightLabels: Record<HighlightKind, { title: string; subtitle: string; body: string }> = {
+  testimonial: { title: "Person's name", subtitle: "Their role and company", body: "What they said (the quote)" },
+  publication: { title: "Paper or article title", subtitle: "Venue and year", body: "Short summary (optional)" },
+};
+
+function HighlightEditor({ initialHighlights }: { initialHighlights: Highlight[] }) {
+  const [items, setItems] = useState(initialHighlights);
+  const [form, setForm] = useState(emptyHighlight);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [status, setStatus] = useState<Status>({ kind: "idle" });
+  const pending = status.kind === "pending";
+  const labels = highlightLabels[form.kind];
+
+  function startEdit(item: Highlight) {
+    setEditingId(item.id);
+    setConfirmingId(null);
+    setForm({ kind: item.kind, title: item.title, subtitle: item.subtitle, body: item.body, url: item.url ?? "" });
+    setStatus({ kind: "idle" });
+  }
+
+  function reset() {
+    setEditingId(null);
+    setForm(emptyHighlight);
+  }
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    setStatus({ kind: "pending" });
+    const result = await send(editingId ? "PATCH" : "POST", "/api/highlights", editingId ? { id: editingId, ...form } : form);
+    if (!result.ok) return setStatus(result.status);
+
+    const saved = result.data.highlight as Highlight;
+    setItems((current) => (editingId ? current.map((item) => (item.id === saved.id ? saved : item)) : [...current, saved]));
+    setStatus({ kind: "success", message: editingId ? "Entry updated." : "Entry created." });
+    reset();
+  }
+
+  async function remove(id: string) {
+    setConfirmingId(null);
+    setStatus({ kind: "pending" });
+    const result = await send("DELETE", "/api/highlights", { id });
+    if (!result.ok) return setStatus(result.status);
+
+    setItems((current) => current.filter((item) => item.id !== id));
+    if (editingId === id) reset();
+    setStatus({ kind: "success", message: "Entry deleted." });
+  }
+
+  return (
+    <section aria-labelledby="admin-highlights-title" className="border-t border-ink/10 py-10">
+      <h2 id="admin-highlights-title" className="font-display text-2xl font-semibold">Testimonials and publications</h2>
+      <p className="mt-2 text-sm text-muted">These sections appear on the home page only when at least one entry exists.</p>
+      {items.length ? (
+        <ul className="mt-6 divide-y divide-ink/10 border border-ink/10">
+          {items.map((item) => (
+            <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
+              <span><span className="font-semibold">{item.title}</span> <span className="text-sm text-muted">({item.kind})</span></span>
+              <span className="flex gap-4">
+                <button type="button" className={linkButton} onClick={() => startEdit(item)}>Edit {item.title}</button>
+                {confirmingId === item.id
+                  ? <button type="button" className={linkButton} onClick={() => remove(item.id)}>Confirm delete {item.title}</button>
+                  : <button type="button" className={linkButton} onClick={() => setConfirmingId(item.id)}>Delete {item.title}</button>}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : <p className="mt-6 text-muted">No entries yet.</p>}
+
+      <form onSubmit={submit} className="mt-8 grid gap-4" aria-label={editingId ? "Edit entry" : "New entry"}>
+        <h3 className="text-lg font-semibold">{editingId ? "Edit entry" : "New entry"}</h3>
+        <label className="block text-sm font-medium">Type
+          <select className={inputClass} value={form.kind} onChange={(event) => setForm({ ...form, kind: event.target.value as HighlightKind })}>
+            <option value="testimonial">Testimonial</option>
+            <option value="publication">Publication</option>
+          </select>
+        </label>
+        <label className="block text-sm font-medium">{labels.title}
+          <input className={inputClass} value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} />
+        </label>
+        <label className="block text-sm font-medium">{labels.subtitle}
+          <input className={inputClass} value={form.subtitle} onChange={(event) => setForm({ ...form, subtitle: event.target.value })} />
+        </label>
+        <label className="block text-sm font-medium">{labels.body}
+          <textarea className={inputClass} rows={4} value={form.body} onChange={(event) => setForm({ ...form, body: event.target.value })} />
+        </label>
+        <label className="block text-sm font-medium">Link (optional)
+          <input className={inputClass} type="url" placeholder="https://" value={form.url} onChange={(event) => setForm({ ...form, url: event.target.value })} />
+        </label>
+        <div className="flex flex-wrap items-center gap-4">
+          <button type="submit" className={primaryButton} disabled={pending}>{editingId ? "Save entry" : "Create entry"}</button>
+          {editingId ? <button type="button" className={linkButton} onClick={reset}>Cancel edit</button> : null}
+          <StatusMessage status={status} />
+        </div>
+      </form>
+    </section>
+  );
+}
+
+export function ContentEditor({ initialProjects, initialSkills, initialHighlights = [] }: { initialProjects: Project[]; initialSkills: SkillRecord[]; initialHighlights?: Highlight[] }) {
   return (
     <div>
       <ProjectEditor initialProjects={initialProjects} />
       <SkillEditor initialSkills={initialSkills} />
+      <HighlightEditor initialHighlights={initialHighlights} />
     </div>
   );
 }
