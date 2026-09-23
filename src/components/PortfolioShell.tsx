@@ -17,6 +17,7 @@ export function PortfolioShell({ children, session }: { children: React.ReactNod
           <Link href="/" className="font-display text-xl font-semibold tracking-tight">{portfolioContent.name}</Link>
           <nav aria-label="Primary navigation" className="order-3 flex w-full gap-5 text-sm text-muted sm:order-2 sm:w-auto">
             {portfolioContent.navigation.map((item) => <a key={item} href={`#${item.toLowerCase()}`} className="hover:text-accent">{item}</a>)}
+            {session?.role === "Admin" ? <Link href="/admin/analytics" className="font-semibold text-accent hover:underline">Dashboard</Link> : null}
           </nav>
           <div className="flex items-center gap-3 sm:order-3">
             <ThemeToggle />

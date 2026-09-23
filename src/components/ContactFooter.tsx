@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 
+import { ContactForm } from "@/components/ContactForm";
 import type { ContactLink } from "@/data/portfolio";
 
 type Icon = ContactLink["icon"];
@@ -35,7 +36,7 @@ export function ContactFooter({ links, name }: { links: ContactLink[]; name?: st
         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-accent">Contact</p>
         <h2 id="contact-title" className="mt-3 font-display text-4xl font-semibold tracking-tight sm:text-5xl">Let&apos;s build something useful.</h2>
         <p className="mx-auto mt-5 max-w-xl leading-7 text-muted">I&apos;m open to conversations about backend engineering, data, and applied AI roles. The quickest way to reach me is email.</p>
-        {email ? <a href={email.href} className="mt-8 inline-flex items-center gap-3 rounded-full bg-accent px-7 py-3 text-sm font-semibold text-paper transition hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper">Say hello<span aria-hidden="true">→</span></a> : null}
+        {email ? <a href={email.href} data-track="email" className="mt-8 inline-flex items-center gap-3 rounded-full bg-accent px-7 py-3 text-sm font-semibold text-paper transition hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper">Say hello<span aria-hidden="true">→</span></a> : null}
       </div>
 
       <nav aria-label="Contact links" className="mx-auto mt-14 grid max-w-5xl gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -46,6 +47,7 @@ export function ContactFooter({ links, name }: { links: ContactLink[]; name?: st
               key={link.href}
               href={link.href}
               aria-label={link.label}
+              data-track={link.icon}
               {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
               style={{ "--brand": brand[link.icon] } as CSSProperties}
               className="group flex min-w-0 items-center gap-4 border border-ink/10 p-5 transition hover:-translate-y-0.5 hover:border-[color:var(--brand)] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
@@ -60,6 +62,12 @@ export function ContactFooter({ links, name }: { links: ContactLink[]; name?: st
           );
         })}
       </nav>
+
+      <div className="mx-auto mt-16 max-w-xl">
+        <h3 className="font-display text-2xl font-semibold">Or send a message</h3>
+        <p className="mt-2 text-sm text-muted">Goes straight to my inbox on this site. I read everything.</p>
+        <div className="mt-6"><ContactForm /></div>
+      </div>
 
       <p className="mt-16 text-center text-xs text-muted">© {new Date().getFullYear()} {name ?? ""}</p>
     </footer>

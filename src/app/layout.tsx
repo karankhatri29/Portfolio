@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import "./globals.css";
+import { Analytics } from "@/components/Analytics";
 import { Providers } from "@/components/Providers";
 
 export const metadata: Metadata = {
@@ -13,6 +14,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en" suppressHydrationWarning>
       <body className="font-sans antialiased">
         <Providers>{children}</Providers>
+        <Analytics />
       </body>
     </html>
   );

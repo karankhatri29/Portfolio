@@ -50,6 +50,42 @@ async function main() {
   await sql`ALTER TABLE competencies ADD COLUMN IF NOT EXISTS tools JSONB NOT NULL DEFAULT '[]'::jsonb`;
 
   const [{ count: projectCount }] = (await sql`SELECT COUNT(*)::int AS count FROM projects`) as { count: number }[];
+  await sql`
+    CREATE TABLE IF NOT EXISTS events (
+      id BIGSERIAL PRIMARY KEY,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      type TEXT NOT NULL,
+      path TEXT NOT NULL,
+      referrer TEXT NOT NULL DEFAULT '',
+      ref_tag TEXT NOT NULL DEFAULT '',
+      is_entry BOOLEAN NOT NULL DEFAULT false,
+      country TEXT NOT NULL DEFAULT '',
+      city TEXT NOT NULL DEFAULT '',
+      device TEXT NOT NULL DEFAULT '',
+      visitor_hash TEXT NOT NULL DEFAULT '',
+      target TEXT NOT NULL DEFAULT ''
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS events_type_created_idx ON events (type, created_at)`;
+  await sql`CREATE INDEX IF NOT EXISTS events_path_idx ON events (path, created_at)`;
+  await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS browser TEXT NOT NULL DEFAULT ''`;
+  await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS duration_s INT NOT NULL DEFAULT 0`;
+  await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS scroll_pct INT NOT NULL DEFAULT 0`;
+  await sql`CREATE INDEX IF NOT EXISTS events_visitor_idx ON events (visitor_hash)`;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS contact_messages (
+      id TEXT PRIMARY KEY,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      name TEXT NOT NULL,
+      email TEXT NOT NULL,
+      message TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'new',
+      sender_hash TEXT NOT NULL DEFAULT ''
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS contact_messages_created_idx ON contact_messages (created_at)`;
+
   if (projectCount === 0) {
     for (const project of seedProjects) {
       await sql`
