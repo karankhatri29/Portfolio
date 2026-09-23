@@ -16,7 +16,7 @@ import { listBlogPosts } from "@/lib/content/blog";
 const RANGES = [7, 30, 90];
 const DEFAULT_RANGE = 30;
 
-const contactLabels: Record<string, string> = { email: "Email", phone: "Phone", github: "GitHub", linkedin: "LinkedIn", booking: "Book a call" };
+const contactLabels: Record<string, string> = { email: "Email", github: "GitHub", linkedin: "LinkedIn", booking: "Book a call" };
 
 function readDays(value: string | undefined) {
   const days = Number(value);

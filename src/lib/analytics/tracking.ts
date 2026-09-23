@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-export const CONTACT_TARGETS = ["email", "phone", "github", "linkedin", "booking"] as const;
+export const CONTACT_TARGETS = ["email", "github", "linkedin", "booking"] as const;
 export type ContactTarget = (typeof CONTACT_TARGETS)[number];
 
 const botPattern = /bot|crawl|spider|slurp|facebookexternalhit|preview|headless|lighthouse|pagespeed|gtmetrix|curl|wget|python-requests|httpx|node-fetch|axios|go-http-client|vercel/i;

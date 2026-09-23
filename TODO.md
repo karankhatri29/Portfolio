@@ -33,13 +33,12 @@ Sign-in will fail on the live site until the callback URLs include it.
 - **GitHub** (Settings > Developer settings > OAuth Apps > your app): set the callback URL to `https://YOUR-DOMAIN/api/auth/callback/github` (GitHub allows one, so use a separate app for local vs prod, or switch it when testing).
 - Local dev callbacks use `http://localhost:3000/api/auth/callback/<provider>`.
 
-### [ ] 4. Review and commit the changes
-Nothing is committed yet. Run `git status` and check it before committing.
-- Phase 5 work: `package.json`, `package-lock.json`, `.env.example`, `src/proxy.ts` (moved from `middleware.ts`), `src/app/admin/`, `src/app/api/projects/`, `src/app/api/skills/`, `src/lib/content/`, `src/components/ContentEditor*`, `scripts/`, the edited pages/components/tests, `specs/.../plan.md`, this `TODO.md`.
-- Do **not** commit `.env.local` (it is gitignored; confirm it does not show in `git status`).
-- Decide on `AGENTS.md` and `CLAUDE.md` (untracked; AGENTS.md says committing it keeps the tree clean).
-- Decide on `.claude/` (untracked, local tool settings): commit it or add it to `.gitignore`.
-- Ask Claude to do the commit if you want (one commit or split into several).
+### [ ] 4. Merge your work into `master` and push
+All recent work is committed on the `dev` branch (not yet on `master` or GitHub). When you are happy:
+1. `git switch master`, then `git merge dev`, then `git push` (or open a pull request from `dev` on GitHub; the new CI check will run on it).
+2. Vercel deploys `master` to production. It now runs the database migration automatically before each build.
+3. Still uncommitted and not made by Claude: `.claude/`, `AGENTS.md`, `CLAUDE.md`, the Speckit changes (item 7), and your new "ask"/terminal work (`src/app/api/ask`, `src/lib/ask`, `src/components/terminal`). Decide on each before merging.
+4. Do **not** commit `.env.local` (it is gitignored).
 
 ---
 
@@ -82,6 +81,46 @@ The skills graph links a competency to a tool, and a tool to a project, from the
 
 ---
 
+## P1 - Set up the features added recently
+
+### [ ] 16. Set the site address and the optional settings on Vercel
+Vercel > Project > Settings > Environment Variables (Production). Redeploy afterwards.
+- `NEXT_PUBLIC_SITE_URL` = your real address, for example `https://karan.dev`. Used for share previews, the sitemap, RSS and search engines. Without it the Vercel address is used.
+- `NEXT_PUBLIC_BOOKING_URL` (optional) = your Cal.com or Calendly link. A "Book a call" button appears in the hero only when this is set.
+- `GITHUB_TOKEN` (optional) = a GitHub token with no special permissions. Only needed if the "Open source on GitHub" section ever disappears because GitHub rate-limited the public request.
+- Email alerts: see item 13.
+
+### [ ] 17. Turn on image uploads (optional)
+The blog editor and the project screenshot field have an "Upload image" button. It needs storage:
+1. Vercel > Storage > Create > **Blob** > connect it to this project (all environments).
+2. Vercel adds `BLOB_READ_WRITE_TOKEN` automatically. For local testing run `vercel env pull .env.local` (back up `.env.local` first).
+Until then the button shows "Image uploads are not set up yet". You can always paste an image link instead.
+
+### [ ] 18. Tell search engines and check link previews
+1. Google Search Console > add your site > Sitemaps > submit `https://YOUR-DOMAIN/sitemap.xml`.
+2. Paste your home page and a blog post into LinkedIn's Post Inspector (linkedin.com/post-inspector) and the X card validator to confirm the preview image and text look right.
+3. The RSS feed is at `/feed.xml` and is linked in the footer and blog page.
+
+### [ ] 19. Set up an uptime check (free, 5 minutes)
+Create a free monitor at uptimerobot.com (or Better Stack) that requests `https://YOUR-DOMAIN/api/health` every 5 minutes and emails you if it fails. It reports "ok" only when the database also answers.
+
+### [ ] 20. Check the new automatic checks on GitHub
+After the first push, open the repository's **Actions** tab: the "CI" workflow should run type-check, lint, tests and build and go green. Dependabot will open weekly update pull requests (Repository > Insights > Dependency graph > Dependabot).
+
+### [ ] 21. Add your real content (nothing is invented)
+Sign in and open `/admin`:
+- **Case studies:** for each project add the problem, approach, result, a live demo or video link and screenshots.
+- **Testimonials:** ask a manager, professor or teammate for a short quote and permission to publish it; add it under "Testimonials and publications". The section stays hidden until at least one exists.
+- **Publications:** add your research papers (for example the fake-news detection work) with venue, year and a link.
+- **Blog:** `/admin/blog` to write, preview, save drafts and publish. Add tags so readers can filter.
+- **Resume:** `/resume` is generated from your site content. Open it and use "Save as PDF" to produce a file you can attach to applications.
+- **Availability:** the green "Open to..." badge is in `src/data/portfolio.ts` (`availability`); set `open: false` to hide it.
+
+### [ ] 22. Keep your database migrations in step
+Every deploy now runs `npm run db:migrate:ci` first, so new tables and columns are created automatically and safely (it only adds things and imports your original blog posts once). If a deploy fails at that step, check that `DATABASE_URL` is set for that environment.
+
+---
+
 ## P2 - Cleanup decisions
 
 ### [ ] 7. Unexpected Speckit changes in your working tree
@@ -97,18 +136,15 @@ The phone number was removed from the contact list, footer and tests (2026-09-23
 3. Rewrite history to scrub it (`git filter-repo --replace-text`) and force-push. This is destructive and changes every commit hash; do it deliberately, on a fresh backup clone, and ask Claude to walk you through it. Forks and caches may still hold copies.
 Redeploy so the live site stops showing the number, and check `https://YOUR-DOMAIN` for `tel:` links afterward.
 
-### [ ] 9. Two stale tests that were already failing
-Not caused by Phase 5, but they keep the test run red:
-- ~~`src/components/CareerTimeline.test.tsx` expected stale timeline data~~ (fixed when the interactive timeline was built).
-- `src/app/blog/[slug]/page.test.tsx` fails on an exact text match against the mocked Markdown output.
-Ask Claude to fix them.
+### [x] 9. Stale tests (fixed)
+Both previously failing tests were fixed. CI now runs the whole suite on every push.
 
 ---
 
 ## P3 - Later
 
-### [ ] 10. Manual responsive and accessibility review (plan tasks T028/T029, Phase 6)
-Check the site at 375px, 768px and 1440px wide, and try keyboard-only navigation (Tab through the page, the admin forms and the delete confirmation). Record the results in `specs/001-authenticated-portfolio/quickstart.md`, which is out of date.
+### [ ] 10. Manual responsive and keyboard review
+Lighthouse scores 100 for accessibility, best practices and SEO on every page. What automation cannot judge is feel: open the site on a real phone (375px), a tablet and a laptop, and Tab through the home page, the blog, the resume and the admin forms to check nothing is awkward. Record anything odd in `specs/001-authenticated-portfolio/quickstart.md` or tell Claude.
 
 ### [ ] 11. Update the stale spec docs
 `plan.md` Phase 4 checkboxes are still unchecked even though the blog is built. Ask Claude to reconcile them.
@@ -126,8 +162,8 @@ The code is ready. It emails you when someone uses the contact form, and sends a
 5. The weekly digest is scheduled in `vercel.json` (Mondays 03:00 UTC). To test it right away, in the Vercel dashboard open Settings > Cron Jobs and run `/api/cron/digest`.
 6. To disable alerts later, just delete `RESEND_API_KEY`.
 
-### [ ] 14. Add a short privacy note to the site (recommended)
-The site now records page views without cookies and stores contact messages. A one-line note near the contact form or footer, such as "This site counts page views without cookies or personal identifiers. Messages you send are stored so I can reply.", is good practice. Ask Claude to add it.
+### [x] 14. Privacy note (done)
+A plain-language `/privacy` page exists and is linked from the footer and the contact form. Re-read it if you change what the site records.
 
 ### [ ] 15. Optional: data cleanup schedule
 Raw events grow over time. Neon's free tier is generous, but every few months you can delete old rows in the Neon SQL editor: `DELETE FROM events WHERE created_at < now() - interval '180 days';`. Ask Claude if you want this automated.
@@ -138,5 +174,9 @@ Raw events grow over time. Neon's free tier is generous, but every few months yo
 - [x] Neon database created and linked
 - [x] `DATABASE_URL` added to local `.env.local`
 - [x] Tables created and seeded (`npm run db:migrate`)
+- [x] Phone number removed from all code, pages and the database (git history: see item 8)
+- [x] SEO, share previews, sitemap, robots, RSS, privacy page, security headers, custom 404/error pages, health check, error monitoring on the dashboard
+- [x] Resume page, case studies, testimonials/publications sections, GitHub section, database-backed blog with admin editor
+- [x] CI workflow and Dependabot configuration
 - [x] Analytics tables (`events`, `contact_messages`) created in Neon
 - [x] `tools`, `stack` and `github_url` columns added and backfilled (`npm run db:migrate`, run 2026-09-23)

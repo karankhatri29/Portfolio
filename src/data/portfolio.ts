@@ -10,7 +10,7 @@ export type TimelineItem = {
   tags?: string[];
 };
 
-export type ContactLink = { label: string; href: string; icon: "email" | "github" | "linkedin" | "phone" };
+export type ContactLink = { label: string; href: string; icon: "email" | "github" | "linkedin" };
 
 /** A headline figure; `value` counts up when it scrolls into view. */
 export type AboutStat = { value: number; decimals?: number; suffix?: string; label: string; detail: string };

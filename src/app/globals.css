@@ -47,3 +47,7 @@ body { background: rgb(var(--color-paper)); color: rgb(var(--color-ink)); }
   @page { margin: 14mm; }
   body { background: #fff !important; color: #000 !important; }
 }
+
+/* Below-the-fold sections skip rendering work until they are near the viewport. */
+.defer-render { content-visibility: auto; contain-intrinsic-size: auto 800px; }
+@media print { .defer-render { content-visibility: visible; } }

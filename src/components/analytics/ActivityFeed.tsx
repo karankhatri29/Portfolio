@@ -1,7 +1,7 @@
 import { countryName, timeAgo } from "@/lib/analytics/format";
 import type { RecentActivity } from "@/lib/analytics/repository";
 
-const contactLabels: Record<string, string> = { email: "email", phone: "phone", github: "GitHub", linkedin: "LinkedIn", booking: "booking" };
+const contactLabels: Record<string, string> = { email: "email", github: "GitHub", linkedin: "LinkedIn", booking: "booking" };
 
 function describe(item: RecentActivity) {
   if (item.kind === "message") return `${item.detail} sent a message`;

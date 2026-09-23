@@ -47,19 +47,19 @@ export default async function Page() {
           alumniOf: { "@type": "CollegeOrUniversity", name: "Vellore Institute of Technology" },
         }}
       />
-      <div className="mx-auto max-w-6xl px-5 lg:px-8"><HeroSection content={portfolioContent} bookingUrl={process.env.NEXT_PUBLIC_BOOKING_URL || undefined} /></div>
+      <div className="mx-auto max-w-6xl px-5 lg:px-8"><HeroSection content={portfolioContent} projects={projects} skills={skills} bookingUrl={process.env.NEXT_PUBLIC_BOOKING_URL || undefined} /></div>
       <div className="mx-auto max-w-7xl px-5 lg:px-10"><CareerTimeline items={portfolioContent.timeline} /></div>
       {skillGraph.edges.length ? (
-        <div className="mx-auto max-w-7xl px-5 lg:px-10"><CompetencyGraph graph={skillGraph} skills={skills} projects={projects} /></div>
+        <div className="mx-auto max-w-7xl px-5 lg:px-10 defer-render"><CompetencyGraph graph={skillGraph} skills={skills} projects={projects} /></div>
       ) : (
-        <div className="mx-auto max-w-6xl px-5 lg:px-8"><CompetencyGrid items={skills} /></div>
+        <div className="mx-auto max-w-6xl px-5 lg:px-8 defer-render"><CompetencyGrid items={skills} /></div>
       )}
-      <div className="mx-auto max-w-7xl px-5 lg:px-10"><ProjectShowcase projects={projects} fallbackGithubUrl={githubProfile} /></div>
-      <div className="mx-auto max-w-6xl px-5 lg:px-8"><OpenSource activity={github} /></div>
-      <div className="mx-auto max-w-6xl px-5 lg:px-8"><Publications items={highlights.filter((item) => item.kind === "publication")} /></div>
-      <div className="mx-auto max-w-6xl px-5 lg:px-8"><Testimonials items={highlights.filter((item) => item.kind === "testimonial")} /></div>
-      <div className="mx-auto max-w-6xl px-5 lg:px-8"><WritingPreview posts={writing} /></div>
-      <div className="mx-auto max-w-6xl px-5 lg:px-8"><AboutSection about={portfolioContent.about} /></div>
+      <div className="mx-auto max-w-7xl px-5 lg:px-10 defer-render"><ProjectShowcase projects={projects} fallbackGithubUrl={githubProfile} /></div>
+      <div className="mx-auto max-w-6xl px-5 lg:px-8 defer-render"><OpenSource activity={github} /></div>
+      <div className="mx-auto max-w-6xl px-5 lg:px-8 defer-render"><Publications items={highlights.filter((item) => item.kind === "publication")} /></div>
+      <div className="mx-auto max-w-6xl px-5 lg:px-8 defer-render"><Testimonials items={highlights.filter((item) => item.kind === "testimonial")} /></div>
+      <div className="mx-auto max-w-6xl px-5 lg:px-8 defer-render"><WritingPreview posts={writing} /></div>
+      <div className="mx-auto max-w-6xl px-5 lg:px-8 defer-render"><AboutSection about={portfolioContent.about} /></div>
     </PortfolioShell>
   );
 }
