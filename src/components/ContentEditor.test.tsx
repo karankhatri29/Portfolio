@@ -84,7 +84,7 @@ describe("project editing", () => {
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe("/api/projects");
     expect(init.method).toBe("POST");
-    expect(JSON.parse(init.body)).toEqual({ slug: "new-project", title: "New Project", year: "2026", role: "Builder", summary: "Brand new.", outcomes: ["Did a thing", "Did another"] });
+    expect(JSON.parse(init.body)).toEqual({ slug: "new-project", title: "New Project", year: "2026", role: "Builder", summary: "Brand new.", outcomes: ["Did a thing", "Did another"], stack: [], githubUrl: "" });
   });
 
   it("shows validation errors from the server and keeps the list unchanged", async () => {
@@ -184,7 +184,7 @@ describe("competency editing", () => {
     await user.click(screen.getByRole("button", { name: "Save competency" }));
 
     expect(await screen.findByText("Competency updated.")).toBeInTheDocument();
-    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ id: "skill-1", name: "Renamed Skill", description: "Already in the database." });
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ id: "skill-1", name: "Renamed Skill", description: "Already in the database.", tools: [] });
   });
 
   it("deletes a competency after confirmation", async () => {

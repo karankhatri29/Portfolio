@@ -46,7 +46,8 @@ function StatusMessage({ status }: { status: Status }) {
   );
 }
 
-const emptyProject = { slug: "", title: "", year: "", role: "", summary: "", outcomes: "" };
+const emptyProject = { slug: "", title: "", year: "", role: "", summary: "", outcomes: "", stack: "", githubUrl: "" };
+const splitList = (value: string, separator: string) => value.split(separator).map((item) => item.trim()).filter(Boolean);
 
 function ProjectEditor({ initialProjects }: { initialProjects: Project[] }) {
   const [projects, setProjects] = useState(initialProjects);
@@ -59,7 +60,7 @@ function ProjectEditor({ initialProjects }: { initialProjects: Project[] }) {
   function startEdit(project: Project) {
     setEditingSlug(project.slug);
     setConfirmingSlug(null);
-    setForm({ ...project, outcomes: project.outcomes.join("\n") });
+    setForm({ ...project, outcomes: project.outcomes.join("\n"), stack: (project.stack ?? []).join(", "), githubUrl: project.githubUrl ?? "" });
     setStatus({ kind: "idle" });
   }
 
@@ -71,7 +72,7 @@ function ProjectEditor({ initialProjects }: { initialProjects: Project[] }) {
   async function submit(event: FormEvent) {
     event.preventDefault();
     setStatus({ kind: "pending" });
-    const payload = { ...form, outcomes: form.outcomes.split("\n").map((line) => line.trim()).filter(Boolean) };
+    const payload = { ...form, outcomes: splitList(form.outcomes, "\n"), stack: splitList(form.stack, ",") };
     const result = await send(editingSlug ? "PATCH" : "POST", "/api/projects", payload);
     if (!result.ok) return setStatus(result.status);
 
@@ -131,6 +132,12 @@ function ProjectEditor({ initialProjects }: { initialProjects: Project[] }) {
         <label className="block text-sm font-medium">Outcomes (one per line)
           <textarea className={inputClass} rows={4} value={form.outcomes} onChange={(event) => setForm({ ...form, outcomes: event.target.value })} />
         </label>
+        <label className="block text-sm font-medium">Stack (comma separated, match tool names used in Competencies)
+          <input className={inputClass} value={form.stack} onChange={(event) => setForm({ ...form, stack: event.target.value })} />
+        </label>
+        <label className="block text-sm font-medium">GitHub repository URL
+          <input className={inputClass} type="url" placeholder="https://github.com/you/repo" value={form.githubUrl} onChange={(event) => setForm({ ...form, githubUrl: event.target.value })} />
+        </label>
         <div className="flex flex-wrap items-center gap-4">
           <button type="submit" className={primaryButton} disabled={pending}>{editingSlug ? "Save project" : "Create project"}</button>
           {editingSlug ? <button type="button" className={linkButton} onClick={reset}>Cancel edit</button> : null}
@@ -141,7 +148,7 @@ function ProjectEditor({ initialProjects }: { initialProjects: Project[] }) {
   );
 }
 
-const emptySkill = { name: "", description: "" };
+const emptySkill = { name: "", description: "", tools: "" };
 
 function SkillEditor({ initialSkills }: { initialSkills: SkillRecord[] }) {
   const [skills, setSkills] = useState(initialSkills);
@@ -154,7 +161,7 @@ function SkillEditor({ initialSkills }: { initialSkills: SkillRecord[] }) {
   function startEdit(skill: SkillRecord) {
     setEditingId(skill.id);
     setConfirmingId(null);
-    setForm({ name: skill.name, description: skill.description });
+    setForm({ name: skill.name, description: skill.description, tools: (skill.tools ?? []).join(", ") });
     setStatus({ kind: "idle" });
   }
 
@@ -166,7 +173,8 @@ function SkillEditor({ initialSkills }: { initialSkills: SkillRecord[] }) {
   async function submit(event: FormEvent) {
     event.preventDefault();
     setStatus({ kind: "pending" });
-    const result = await send(editingId ? "PATCH" : "POST", "/api/skills", editingId ? { id: editingId, ...form } : form);
+    const body = { ...form, tools: splitList(form.tools, ",") };
+    const result = await send(editingId ? "PATCH" : "POST", "/api/skills", editingId ? { id: editingId, ...body } : body);
     if (!result.ok) return setStatus(result.status);
 
     const saved = result.data.skill as SkillRecord;
@@ -212,6 +220,9 @@ function SkillEditor({ initialSkills }: { initialSkills: SkillRecord[] }) {
         </label>
         <label className="block text-sm font-medium">Description
           <textarea className={inputClass} rows={3} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} />
+        </label>
+        <label className="block text-sm font-medium">Tools (comma separated)
+          <input className={inputClass} value={form.tools} onChange={(event) => setForm({ ...form, tools: event.target.value })} />
         </label>
         <div className="flex flex-wrap items-center gap-4">
           <button type="submit" className={primaryButton} disabled={pending}>{editingId ? "Save competency" : "Create competency"}</button>

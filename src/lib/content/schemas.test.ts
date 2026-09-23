@@ -34,6 +34,14 @@ describe("validateProjectInput", () => {
     if (!result.valid) expect(result.errors).toContain("outcomes must be a non-empty list");
   });
 
+  it("accepts a github repository link and a blank one, and rejects other hosts", () => {
+    expect(validateProjectInput({ ...validProject, githubUrl: " https://github.com/karankhatri29/portfolio " })).toEqual({ valid: true, data: { ...validProject, githubUrl: "https://github.com/karankhatri29/portfolio" } });
+    expect(validateProjectInput({ ...validProject, githubUrl: "" })).toEqual({ valid: true, data: { ...validProject, githubUrl: "" } });
+    for (const bad of ["https://gitlab.com/a/b", "http://github.com/a/b", "javascript:alert(1)", 42]) {
+      expect(validateProjectInput({ ...validProject, githubUrl: bad }).valid).toBe(false);
+    }
+  });
+
   it("rejects a non-object payload", () => {
     const result = validateProjectInput(null);
     expect(result.valid).toBe(false);

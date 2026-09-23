@@ -8,6 +8,7 @@ export type Project = {
   role: string;
   outcomes: string[];
   stack?: string[];
+  githubUrl?: string;
 };
 
 export type SkillRecord = {
@@ -17,7 +18,7 @@ export type SkillRecord = {
   tools?: string[];
 };
 
-type ProjectRow = { slug: string; title: string; year: string; summary: string; role: string; outcomes: string[]; stack: string[] | null };
+type ProjectRow = { slug: string; title: string; year: string; summary: string; role: string; outcomes: string[]; stack: string[] | null; github_url: string | null };
 type SkillRow = { id: string; name: string; description: string; tools: string[] | null };
 
 function sqlClient() {
@@ -29,7 +30,7 @@ function sqlClient() {
 }
 
 function toProject(row: ProjectRow): Project {
-  return { slug: row.slug, title: row.title, year: row.year, summary: row.summary, role: row.role, outcomes: row.outcomes, stack: row.stack ?? [] };
+  return { slug: row.slug, title: row.title, year: row.year, summary: row.summary, role: row.role, outcomes: row.outcomes, stack: row.stack ?? [], githubUrl: row.github_url ?? undefined };
 }
 
 function toSkill(row: SkillRow): SkillRecord {
@@ -38,22 +39,22 @@ function toSkill(row: SkillRow): SkillRecord {
 
 export async function listProjects(): Promise<Project[]> {
   const sql = sqlClient();
-  const rows = (await sql`SELECT slug, title, year, summary, role, outcomes, stack FROM projects ORDER BY year DESC, title ASC`) as ProjectRow[];
+  const rows = (await sql`SELECT slug, title, year, summary, role, outcomes, stack, github_url FROM projects ORDER BY year DESC, title ASC`) as ProjectRow[];
   return rows.map(toProject);
 }
 
 export async function getProject(slug: string): Promise<Project | undefined> {
   const sql = sqlClient();
-  const rows = (await sql`SELECT slug, title, year, summary, role, outcomes, stack FROM projects WHERE slug = ${slug}`) as ProjectRow[];
+  const rows = (await sql`SELECT slug, title, year, summary, role, outcomes, stack, github_url FROM projects WHERE slug = ${slug}`) as ProjectRow[];
   return rows[0] ? toProject(rows[0]) : undefined;
 }
 
 export async function createProject(input: Project): Promise<Project> {
   const sql = sqlClient();
   const rows = (await sql`
-    INSERT INTO projects (slug, title, year, summary, role, outcomes, stack)
-    VALUES (${input.slug}, ${input.title}, ${input.year}, ${input.summary}, ${input.role}, ${JSON.stringify(input.outcomes)}::jsonb, ${JSON.stringify(input.stack ?? [])}::jsonb)
-    RETURNING slug, title, year, summary, role, outcomes, stack
+    INSERT INTO projects (slug, title, year, summary, role, outcomes, stack, github_url)
+    VALUES (${input.slug}, ${input.title}, ${input.year}, ${input.summary}, ${input.role}, ${JSON.stringify(input.outcomes)}::jsonb, ${JSON.stringify(input.stack ?? [])}::jsonb, ${input.githubUrl || null})
+    RETURNING slug, title, year, summary, role, outcomes, stack, github_url
   `) as ProjectRow[];
   return toProject(rows[0]);
 }
@@ -66,9 +67,9 @@ export async function updateProject(slug: string, patch: Partial<Omit<Project, "
   const sql = sqlClient();
   const rows = (await sql`
     UPDATE projects
-    SET title = ${next.title}, year = ${next.year}, summary = ${next.summary}, role = ${next.role}, outcomes = ${JSON.stringify(next.outcomes)}::jsonb, stack = ${JSON.stringify(next.stack ?? [])}::jsonb
+    SET title = ${next.title}, year = ${next.year}, summary = ${next.summary}, role = ${next.role}, outcomes = ${JSON.stringify(next.outcomes)}::jsonb, stack = ${JSON.stringify(next.stack ?? [])}::jsonb, github_url = ${next.githubUrl || null}
     WHERE slug = ${slug}
-    RETURNING slug, title, year, summary, role, outcomes, stack
+    RETURNING slug, title, year, summary, role, outcomes, stack, github_url
   `) as ProjectRow[];
   return rows[0] ? toProject(rows[0]) : undefined;
 }

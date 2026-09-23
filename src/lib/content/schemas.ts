@@ -2,6 +2,7 @@ import type { Project, SkillRecord } from "@/lib/content/repository";
 
 export type ValidationResult<T> = { valid: true; data: T } | { valid: false; errors: string[] };
 
+const githubUrlPattern = /^https:\/\/github\.com\/[\w.-]+(?:\/[\w.-]+)?\/?$/;
 const safeSlug = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 function isNonEmptyString(value: unknown): value is string {
@@ -37,6 +38,15 @@ export function validateProjectInput(payload: unknown): ValidationResult<Project
 
   const stack = readStringList(record.stack, "stack", errors);
 
+  let githubUrl: string | undefined;
+  if (record.githubUrl !== undefined) {
+    if (typeof record.githubUrl !== "string" || (record.githubUrl.trim() !== "" && !githubUrlPattern.test(record.githubUrl.trim()))) {
+      errors.push("githubUrl must be a https://github.com link");
+    } else {
+      githubUrl = record.githubUrl.trim();
+    }
+  }
+
   if (errors.length > 0) return { valid: false, errors };
 
   return {
@@ -49,6 +59,7 @@ export function validateProjectInput(payload: unknown): ValidationResult<Project
       role: record.role as string,
       outcomes: record.outcomes as string[],
       ...(stack ? { stack } : {}),
+      ...(githubUrl !== undefined ? { githubUrl } : {}),
     },
   };
 }

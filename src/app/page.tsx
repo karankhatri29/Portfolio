@@ -5,7 +5,7 @@ import { CompetencyGraph } from "@/components/CompetencyGraph";
 import { CompetencyGrid } from "@/components/CompetencyGrid";
 import { HeroSection } from "@/components/HeroSection";
 import { PortfolioShell } from "@/components/PortfolioShell";
-import { ProjectCard } from "@/components/ProjectCard";
+import { ProjectShowcase } from "@/components/ProjectShowcase";
 import { WritingPreview } from "@/components/WritingPreview";
 import { listBlogPosts } from "@/lib/content/blog";
 import { listProjects, listSkills } from "@/lib/content/repository";
@@ -16,6 +16,7 @@ export default async function Page() {
   const [session, projects, skills] = await Promise.all([auth(), listProjects(), listSkills()]);
   const writing = listBlogPosts();
   const skillGraph = buildSkillGraph(skills, projects);
+  const githubProfile = portfolioContent.contactLinks.find((link) => link.icon === "github")?.href;
 
   return (
     <PortfolioShell session={session}>
@@ -26,10 +27,7 @@ export default async function Page() {
       ) : (
         <div className="mx-auto max-w-6xl px-5 lg:px-8"><CompetencyGrid items={skills} /></div>
       )}
-      <section id="projects" aria-labelledby="projects-title" className="mx-auto max-w-6xl px-5 py-16 lg:px-8 lg:py-24">
-        <h2 id="projects-title" className="font-display text-3xl font-semibold">Selected work</h2>
-        <div className="mt-10 grid gap-5 md:grid-cols-2">{projects.map((project) => <ProjectCard key={project.slug} project={project} />)}</div>
-      </section>
+      <div className="mx-auto max-w-7xl px-5 lg:px-10"><ProjectShowcase projects={projects} fallbackGithubUrl={githubProfile} /></div>
       <div className="mx-auto max-w-6xl px-5 lg:px-8"><WritingPreview posts={writing} /></div>
       <div className="mx-auto max-w-6xl px-5 lg:px-8"><AboutSection about={portfolioContent.about} /></div>
     </PortfolioShell>
