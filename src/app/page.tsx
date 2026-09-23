@@ -1,29 +1,65 @@
 import { auth } from "@/auth";
 import { AboutSection } from "@/components/AboutSection";
 import { CareerTimeline } from "@/components/CareerTimeline";
+import { CompetencyGraph } from "@/components/CompetencyGraph";
 import { CompetencyGrid } from "@/components/CompetencyGrid";
 import { HeroSection } from "@/components/HeroSection";
+import { JsonLd } from "@/components/JsonLd";
+import { OpenSource } from "@/components/OpenSource";
+import { Publications } from "@/components/Publications";
+import { Testimonials } from "@/components/Testimonials";
 import { PortfolioShell } from "@/components/PortfolioShell";
-import { ProjectCard } from "@/components/ProjectCard";
+import { ProjectShowcase } from "@/components/ProjectShowcase";
 import { WritingPreview } from "@/components/WritingPreview";
 import { listBlogPosts } from "@/lib/content/blog";
+import { listHighlights, listProjects, listSkills } from "@/lib/content/repository";
 import { portfolioContent } from "@/data/portfolio";
+import { getGithubActivity, githubUsername } from "@/lib/github";
+import { absoluteUrl, siteUrl, socialProfiles } from "@/lib/site";
+import { buildSkillGraph } from "@/lib/skills/graph";
 
 export default async function Page() {
-  const session = await auth();
-  const writing = listBlogPosts();
+  const githubUser = githubUsername(portfolioContent.contactLinks);
+  // Optional sections must never take the page down: a missing table or GitHub outage just hides them.
+  const [session, projects, skills, highlights, github, writing] = await Promise.all([
+    auth(),
+    listProjects(),
+    listSkills(),
+    listHighlights().catch(() => []),
+    githubUser ? getGithubActivity(githubUser) : Promise.resolve(null),
+    listBlogPosts().catch(() => []),
+  ]);
+  const skillGraph = buildSkillGraph(skills, projects);
+  const githubProfile = portfolioContent.contactLinks.find((link) => link.icon === "github")?.href;
 
   return (
     <PortfolioShell session={session}>
-      <div className="mx-auto max-w-6xl px-5 lg:px-8"><HeroSection content={portfolioContent} /></div>
-      <div className="mx-auto max-w-6xl px-5 lg:px-8"><CareerTimeline items={portfolioContent.timeline} /></div>
-      <div className="mx-auto max-w-6xl px-5 lg:px-8"><CompetencyGrid items={portfolioContent.competencies} /></div>
-      <section id="projects" aria-labelledby="projects-title" className="mx-auto max-w-6xl px-5 py-16 lg:px-8 lg:py-24">
-        <h2 id="projects-title" className="font-display text-3xl font-semibold">Selected work</h2>
-        <div className="mt-10 grid gap-5 md:grid-cols-2">{portfolioContent.projects.map((project) => <ProjectCard key={project.slug} project={project} />)}</div>
-      </section>
-      <div className="mx-auto max-w-6xl px-5 lg:px-8"><WritingPreview posts={writing} /></div>
-      <div className="mx-auto max-w-6xl px-5 lg:px-8"><AboutSection about={portfolioContent.about} /></div>
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "Person",
+          name: portfolioContent.name,
+          jobTitle: portfolioContent.headline.split(".")[0],
+          description: portfolioContent.summary,
+          url: siteUrl(),
+          image: absoluteUrl("/karan-khatri.png"),
+          sameAs: socialProfiles(),
+          alumniOf: { "@type": "CollegeOrUniversity", name: "Vellore Institute of Technology" },
+        }}
+      />
+      <div className="mx-auto max-w-6xl px-5 lg:px-8"><HeroSection content={portfolioContent} projects={projects} skills={skills} bookingUrl={process.env.NEXT_PUBLIC_BOOKING_URL || undefined} /></div>
+      <div className="mx-auto max-w-7xl px-5 lg:px-10"><CareerTimeline items={portfolioContent.timeline} /></div>
+      {skillGraph.edges.length ? (
+        <div className="mx-auto max-w-7xl px-5 lg:px-10 defer-render"><CompetencyGraph graph={skillGraph} skills={skills} projects={projects} /></div>
+      ) : (
+        <div className="mx-auto max-w-6xl px-5 lg:px-8 defer-render"><CompetencyGrid items={skills} /></div>
+      )}
+      <div className="mx-auto max-w-7xl px-5 lg:px-10 defer-render"><ProjectShowcase projects={projects} fallbackGithubUrl={githubProfile} /></div>
+      <div className="mx-auto max-w-6xl px-5 lg:px-8 defer-render"><OpenSource activity={github} /></div>
+      <div className="mx-auto max-w-6xl px-5 lg:px-8 defer-render"><Publications items={highlights.filter((item) => item.kind === "publication")} /></div>
+      <div className="mx-auto max-w-6xl px-5 lg:px-8 defer-render"><Testimonials items={highlights.filter((item) => item.kind === "testimonial")} /></div>
+      <div className="mx-auto max-w-6xl px-5 lg:px-8 defer-render"><WritingPreview posts={writing} /></div>
+      <div className="mx-auto max-w-6xl px-5 lg:px-8 defer-render"><AboutSection about={portfolioContent.about} /></div>
     </PortfolioShell>
   );
 }

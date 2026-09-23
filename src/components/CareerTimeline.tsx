@@ -1,23 +1,26 @@
+import { TimelineGantt } from "@/components/timeline/TimelineGantt";
+import { TimelineList } from "@/components/timeline/TimelineList";
 import type { TimelineItem } from "@/data/portfolio";
+import { buildGantt } from "@/lib/timeline/months";
 
-export function CareerTimeline({ items }: { items: TimelineItem[] }) {
+/**
+ * Desktop shows a Gantt-style chart with a draggable playhead when every entry has dates;
+ * phones, tablets and undated data use the stacked list.
+ */
+export function CareerTimeline({ items, now }: { items: TimelineItem[]; now?: Date }) {
+  const dated = buildGantt(items, now ?? new Date()) !== null;
+
   return (
-    <section aria-labelledby="timeline-title" className="border-b border-ink/10 py-16 lg:py-24">
-      <h2 id="timeline-title" className="font-display text-3xl font-semibold">A short timeline</h2>
+    <section aria-labelledby="timeline-title" className="border-b border-ink/10 py-16 lg:py-20">
+      <h2 id="timeline-title" className="text-center font-display text-3xl font-semibold lg:text-4xl">A short timeline</h2>
       {items.length ? (
-        <dl className="mt-10 space-y-8">
-          {items.map((item) => (
-            <div key={`${item.year}-${item.title}`} className="grid gap-3 border-l border-accent/40 pl-5 sm:grid-cols-[9rem_1fr] sm:gap-8">
-              <dt className="text-sm font-semibold text-accent">{item.year}</dt>
-              <dd>
-                <h3 className="text-xl font-semibold">{item.title}</h3>
-                <p className="mt-1 text-sm text-muted">{item.organization}</p>
-                <p className="mt-3 max-w-2xl leading-7 text-muted">{item.summary}</p>
-              </dd>
-            </div>
-          ))}
-        </dl>
-      ) : <p className="mt-8 text-muted">Timeline coming soon.</p>}
+        <>
+          {dated ? <p className="mx-auto mt-3 hidden max-w-xl text-center text-sm text-muted lg:block">Drag the line through time, or select a project.</p> : null}
+          <p className={`mx-auto mt-3 max-w-xl text-center text-sm text-muted ${dated ? "lg:hidden" : ""}`}>Scroll through, or select a milestone to see what I used.</p>
+          {dated ? <div className="hidden lg:block"><TimelineGantt items={items} now={now} /></div> : null}
+          <div className={dated ? "lg:hidden" : ""}><TimelineList items={items} /></div>
+        </>
+      ) : <p className="mt-8 text-center text-muted">Timeline coming soon.</p>}
     </section>
   );
 }

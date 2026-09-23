@@ -1,0 +1,47 @@
+.hero-terminal-dialog {
+  margin: auto;
+  width: min(92vw, 68rem);
+  height: 80vh;
+  max-width: none;
+  max-height: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  overflow: visible;
+}
+
+.hero-terminal-dialog::backdrop {
+  background: rgb(0 0 0 / 0.72);
+  backdrop-filter: blur(4px);
+}
+
+.hero-terminal-dialog[open] {
+  animation: hero-terminal-open 0.22s ease-out;
+}
+
+@keyframes hero-terminal-open {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(10px);
+  }
+}
+
+/* Phones get the whole screen; dvh keeps the input above the on-screen keyboard. */
+@media (max-width: 639px) {
+  .hero-terminal-dialog {
+    width: 100vw;
+    height: 100dvh;
+    margin: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-terminal-dialog[open] {
+    animation: none;
+  }
+}
+
+html.terminal-open {
+  overflow: hidden;
+}

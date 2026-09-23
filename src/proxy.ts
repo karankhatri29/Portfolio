@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 
 export default auth((request) => {
-  const role = request.auth?.user?.role;
+  const role = request.auth?.role;
   const isApiRequest = request.nextUrl.pathname.startsWith("/api/");
 
   if (role !== "Admin") {
@@ -18,5 +18,5 @@ export default auth((request) => {
 });
 
 export const config = {
-  matcher: ["/admin/:path*", "/api/admin/:path*"],
+  matcher: ["/admin/:path*", "/api/projects/:path*", "/api/skills/:path*", "/api/messages/:path*", "/api/export/:path*", "/api/highlights/:path*", "/api/posts/:path*", "/api/upload/:path*"],
 };

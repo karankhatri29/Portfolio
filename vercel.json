@@ -1,6 +1,12 @@
 {
   "framework": "nextjs",
-  "buildCommand": "npm run build",
+  "buildCommand": "npm run db:migrate:ci && npm run build",
   "installCommand": "npm ci",
-  "outputDirectory": ".next"
+  "outputDirectory": ".next",
+  "crons": [
+    {
+      "path": "/api/cron/digest",
+      "schedule": "0 3 * * 1"
+    }
+  ]
 }
