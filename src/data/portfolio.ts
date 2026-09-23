@@ -35,7 +35,7 @@ export type PortfolioContent = {
 export const portfolioContent: PortfolioContent = {
   name: "Karan Kaushik Khatri",
   eyebrow: "Integrated M.Tech CSE student / builder",
-  headline: "I build intelligent systems that turn messy information into useful decisions.",
+  headline: "AI engineer. I make language models useful on real, messy data.",
   summary: "Computer science engineer at VIT Vellore working across Python, web systems, NLP, knowledge graphs, and applied AI.",
   navigation: ["Work", "Writing", "About", "Contact"],
   timeline: [

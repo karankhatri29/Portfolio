@@ -47,11 +47,14 @@ function TerminalCard({ lines }: { lines: TerminalLine[] }) {
 }
 
 export function HeroSection({ content }: { content: PortfolioContent }) {
+  const [role, ...rest] = content.headline.split(/(?<=\.)\s+/);
+  const claim = rest.join(" ");
+
   return (
     <section aria-labelledby="hero-title" className="grid items-center gap-14 border-b border-ink/10 py-16 lg:grid-cols-[1.2fr_0.8fr] lg:gap-10 lg:py-28">
       <div>
         <p className="mb-5 text-sm font-semibold uppercase tracking-[0.2em] text-accent">{content.eyebrow}</p>
-        <h1 id="hero-title" className="max-w-3xl font-display text-5xl font-semibold leading-[0.95] tracking-tight sm:text-7xl">{content.headline}</h1>
+        <h1 id="hero-title" className="max-w-3xl font-display text-5xl font-semibold leading-[0.95] tracking-tight sm:text-7xl">{claim ? <><span className="block text-accent">{role}</span>{" "}<span className="block">{claim}</span></> : content.headline}</h1>
         <p className="mt-8 max-w-xl text-lg leading-8 text-muted">{content.summary}</p>
         <p className="mt-6 max-w-sm border-l border-accent/50 pl-6 text-sm leading-7 text-muted">Selected work, field notes, and practical ideas for making digital products feel more human.</p>
       </div>

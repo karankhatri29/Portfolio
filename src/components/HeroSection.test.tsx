@@ -11,6 +11,20 @@ describe("HeroSection", () => {
     expect(screen.getByText(portfolioContent.summary)).toBeInTheDocument();
   });
 
+  it("puts the role on its own line ahead of the claim, without changing the headline text", () => {
+    render(<HeroSection content={portfolioContent} />);
+
+    const heading = screen.getByRole("heading", { level: 1 });
+    expect(within(heading).getByText("AI engineer.")).toHaveClass("block");
+    expect(heading).toHaveTextContent("AI engineer. I make language models useful on real, messy data.");
+  });
+
+  it("falls back to the plain headline when it has a single sentence", () => {
+    render(<HeroSection content={{ ...portfolioContent, headline: "One sentence only." }} />);
+
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("One sentence only.");
+  });
+
   it("shows a described portrait", () => {
     render(<HeroSection content={portfolioContent} />);
 
