@@ -1,5 +1,9 @@
 export type TimelineItem = {
   year: string;
+  /** First month, as "YYYY-MM". With `end`, drives the bars on the desktop timeline. */
+  start?: string;
+  /** Last month, as "YYYY-MM"; null or omitted means it is still going. */
+  end?: string | null;
   title: string;
   organization: string;
   summary: string;
@@ -19,6 +23,8 @@ export type AboutContent = {
 
 export type TerminalLine = { command: string; output: string };
 
+export type Availability = { open: boolean; label: string };
+
 export type PortfolioContent = {
   name: string;
   eyebrow: string;
@@ -30,6 +36,8 @@ export type PortfolioContent = {
   about: AboutContent;
   /** Short lines typed out in the hero terminal card; keep each under ~30 characters. */
   terminal: TerminalLine[];
+  /** Shown as a badge in the hero. Set open to false to hide it. */
+  availability?: Availability;
 };
 
 export const portfolioContent: PortfolioContent = {
@@ -37,12 +45,13 @@ export const portfolioContent: PortfolioContent = {
   eyebrow: "Integrated M.Tech CSE student / builder",
   headline: "AI engineer. I make language models useful on real, messy data.",
   summary: "Computer science engineer at VIT Vellore working across Python, web systems, NLP, knowledge graphs, and applied AI.",
+  availability: { open: true, label: "Open to backend and applied AI roles" },
   navigation: ["Work", "Writing", "About", "Contact"],
   timeline: [
-    { year: "May 2026 - now", title: "Backend developer", organization: "Edge-Native Email Triage Framework", summary: "Building a knowledge-graph-backed Gmail pipeline with OAuth 2.0, spaCy, NetworkX, LangChain, and SQLite.", tags: ["OAuth 2.0", "spaCy", "NetworkX", "LangChain", "SQLite"] },
-    { year: "Nov 2025 - Feb 2026", title: "Data analyst", organization: "Context-Aware Recommendation Engine", summary: "Designed NLP intent extraction and retrieval-style ranking over contextual location signals.", tags: ["NLP", "Intent extraction", "Retrieval ranking", "Python"] },
-    { year: "Apr 2025 - Aug 2025", title: "Blockchain developer", organization: "Blockchain Based Marketplace", summary: "Built a decentralized NFT marketplace with Solidity, Ethereum PoS, IPFS, and React.", tags: ["Solidity", "Ethereum PoS", "IPFS", "React"] },
-    { year: "Mar 2025 - May 2025", title: "Data analyst", organization: "Smart Data Compression Algorithm", summary: "Developed adaptive compression with up to 55% size reduction and verified lossless recovery.", tags: ["Python", "Adaptive compression", "Lossless recovery"] },
+    { year: "May 2026 - now", start: "2026-05", end: null, title: "Backend developer", organization: "Edge-Native Email Triage Framework", summary: "Building a knowledge-graph-backed Gmail pipeline with OAuth 2.0, spaCy, NetworkX, LangChain, and SQLite.", tags: ["OAuth 2.0", "spaCy", "NetworkX", "LangChain", "SQLite"] },
+    { year: "Nov 2025 - Feb 2026", start: "2025-11", end: "2026-02", title: "Data analyst", organization: "Context-Aware Recommendation Engine", summary: "Designed NLP intent extraction and retrieval-style ranking over contextual location signals.", tags: ["NLP", "Intent extraction", "Retrieval ranking", "Python"] },
+    { year: "Apr 2025 - Aug 2025", start: "2025-04", end: "2025-08", title: "Blockchain developer", organization: "Blockchain Based Marketplace", summary: "Built a decentralized NFT marketplace with Solidity, Ethereum PoS, IPFS, and React.", tags: ["Solidity", "Ethereum PoS", "IPFS", "React"] },
+    { year: "Mar 2025 - May 2025", start: "2025-03", end: "2025-05", title: "Data analyst", organization: "Smart Data Compression Algorithm", summary: "Developed adaptive compression with up to 55% size reduction and verified lossless recovery.", tags: ["Python", "Adaptive compression", "Lossless recovery"] },
   ],
   contactLinks: [
     { label: "Email Karan", href: "mailto:karankhatri2924@gmail.com", icon: "email" },
