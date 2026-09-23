@@ -10,14 +10,16 @@ export type GraphNode = {
   y: number;
   width: number;
   height: number;
+  /** Tools: used in a listed project. Competencies: has at least one such tool. Projects: always true. */
+  proven: boolean;
 };
 
 export type GraphEdge = { source: string; target: string };
 
 export type SkillGraph = { width: number; height: number; nodes: GraphNode[]; edges: GraphEdge[] };
 
-export const GRAPH_WIDTH = 800;
-export const GRAPH_HEIGHT = 580;
+export const GRAPH_WIDTH = 1000;
+export const GRAPH_HEIGHT = 700;
 const MARGIN = 10;
 const MAX_PROJECT_LABEL = 26;
 
@@ -31,10 +33,10 @@ function truncate(label: string, max: number) {
 }
 
 // Rough label metrics per kind (viewBox units); enough to reserve room for each pill.
-function sizeFor(kind: NodeKind, label: string) {
-  if (kind === "competency") return { width: label.length * 9.4 + 34, height: 38 };
-  if (kind === "project") return { width: label.length * 7.8 + 30, height: 34 };
-  return { width: label.length * 7.2 + 22, height: 28 };
+function sizeFor(kind: NodeKind, label: string, proven: boolean) {
+  if (kind === "competency") return { width: label.length * 10.4 + 40, height: 44 };
+  if (kind === "project") return { width: label.length * 8.6 + 34, height: 38 };
+  return proven ? { width: label.length * 8.2 + 26, height: 32 } : { width: label.length * 7.2 + 20, height: 26 };
 }
 
 // Stable pseudo-random in [0, 1) derived from a string, so layouts never depend on Math.random.
@@ -49,24 +51,44 @@ function hash01(value: string) {
 
 type Draft = Omit<GraphNode, "x" | "y">;
 
+const REST_LENGTH = { competencyTool: 118, toolProject: 190 };
+
 function layout(drafts: Draft[], edges: GraphEdge[], width: number, height: number): GraphNode[] {
   const cx = width / 2;
   const cy = height / 2;
-  const byKind = (kind: NodeKind) => drafts.filter((node) => node.kind === kind);
-  const ringRadius: Record<NodeKind, [number, number]> = { tool: [0.18 * width, 0.16 * height], competency: [0.42 * width, 0.4 * height], project: [0.3 * width, 0.28 * height] };
-  const phase: Record<NodeKind, number> = { tool: 0.3, competency: 0, project: Math.PI / 5 };
+  const parent = new Map<string, string>();
+  for (const edge of edges) if (edge.target.startsWith("tool:") && edge.source.startsWith("competency:") && !parent.has(edge.target)) parent.set(edge.target, edge.source);
 
   const pos = new Map<string, { x: number; y: number; vx: number; vy: number }>();
-  (["competency", "tool", "project"] as NodeKind[]).forEach((kind) => {
-    const group = byKind(kind);
-    group.forEach((node, index) => {
-      const angle = phase[kind] + (index / group.length) * Math.PI * 2 + (hash01(node.id) - 0.5) * 0.3;
-      const [rx, ry] = ringRadius[kind];
-      pos.set(node.id, { x: cx + Math.cos(angle) * rx, y: cy + Math.sin(angle) * ry, vx: 0, vy: 0 });
-    });
+  const competencies = drafts.filter((node) => node.kind === "competency");
+  competencies.forEach((node, index) => {
+    const angle = -Math.PI / 2 + (index / competencies.length) * Math.PI * 2;
+    pos.set(node.id, { x: cx + Math.cos(angle) * width * 0.34, y: cy + Math.sin(angle) * height * 0.32, vx: 0, vy: 0 });
   });
 
-  const iterations = 420;
+  // Each tool starts in a small burst around its competency, so clusters form naturally.
+  const burst = new Map<string, number>();
+  const burstSize = new Map<string, number>();
+  for (const owner of parent.values()) burstSize.set(owner, (burstSize.get(owner) ?? 0) + 1);
+  drafts.filter((node) => node.kind === "tool").forEach((node) => {
+    const owner = parent.get(node.id);
+    const hub = owner ? pos.get(owner) : undefined;
+    const index = owner ? burst.get(owner) ?? 0 : 0;
+    if (owner) burst.set(owner, index + 1);
+    const count = owner ? burstSize.get(owner) ?? 1 : 1;
+    const angle = (index / count) * Math.PI * 2 + hash01(node.id);
+    const base = hub ?? { x: cx, y: cy };
+    pos.set(node.id, { x: base.x + Math.cos(angle) * REST_LENGTH.competencyTool, y: base.y + Math.sin(angle) * REST_LENGTH.competencyTool * 0.8, vx: 0, vy: 0 });
+  });
+
+  drafts.filter((node) => node.kind === "project").forEach((node, index, all) => {
+    const linked = edges.filter((edge) => edge.target === node.id).map((edge) => pos.get(edge.source)).filter((p): p is NonNullable<typeof p> => Boolean(p));
+    const centre = linked.length ? { x: linked.reduce((sum, p) => sum + p.x, 0) / linked.length, y: linked.reduce((sum, p) => sum + p.y, 0) / linked.length } : { x: cx, y: cy };
+    const angle = (index / all.length) * Math.PI * 2;
+    pos.set(node.id, { x: centre.x + Math.cos(angle) * 30, y: centre.y + Math.sin(angle) * 30, vx: 0, vy: 0 });
+  });
+
+  const iterations = 520;
   for (let step = 0; step < iterations; step += 1) {
     const alpha = 1 - (step / iterations) * 0.95;
 
@@ -83,7 +105,7 @@ function layout(drafts: Draft[], edges: GraphEdge[], width: number, height: numb
           dist2 = 1;
         }
         const dist = Math.sqrt(dist2);
-        const force = Math.min(60, 9000 / dist2) * alpha;
+        const force = Math.min(70, 16000 / dist2) * alpha;
         a.vx += (dx / dist) * force;
         a.vy += (dy / dist) * force;
         b.vx -= (dx / dist) * force;
@@ -97,7 +119,8 @@ function layout(drafts: Draft[], edges: GraphEdge[], width: number, height: numb
       const dx = b.x - a.x;
       const dy = b.y - a.y;
       const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-      const force = (dist - 120) * 0.04 * alpha;
+      const toProject = edge.target.startsWith("project:");
+      const force = (dist - (toProject ? REST_LENGTH.toolProject : REST_LENGTH.competencyTool)) * (toProject ? 0.012 : 0.05) * alpha;
       a.vx += (dx / dist) * force;
       a.vy += (dy / dist) * force;
       b.vx -= (dx / dist) * force;
@@ -105,8 +128,8 @@ function layout(drafts: Draft[], edges: GraphEdge[], width: number, height: numb
     }
 
     for (const node of pos.values()) {
-      node.vx += (cx - node.x) * 0.006 * alpha;
-      node.vy += (cy - node.y) * 0.016 * alpha;
+      node.vx += (cx - node.x) * 0.004 * alpha;
+      node.vy += (cy - node.y) * 0.008 * alpha;
       node.x += node.vx;
       node.y += node.vy;
       node.vx *= 0.6;
@@ -115,14 +138,14 @@ function layout(drafts: Draft[], edges: GraphEdge[], width: number, height: numb
   }
 
   // Resolve label overlaps: push apart along the axis with the smaller penetration.
-  for (let pass = 0; pass < 80; pass += 1) {
+  for (let pass = 0; pass < 200; pass += 1) {
     let moved = false;
     for (let i = 0; i < drafts.length; i += 1) {
       for (let j = i + 1; j < drafts.length; j += 1) {
         const a = pos.get(drafts[i].id)!;
         const b = pos.get(drafts[j].id)!;
-        const overlapX = (drafts[i].width + drafts[j].width) / 2 + 8 - Math.abs(a.x - b.x);
-        const overlapY = (drafts[i].height + drafts[j].height) / 2 + 8 - Math.abs(a.y - b.y);
+        const overlapX = (drafts[i].width + drafts[j].width) / 2 + 10 - Math.abs(a.x - b.x);
+        const overlapY = (drafts[i].height + drafts[j].height) / 2 + 10 - Math.abs(a.y - b.y);
         if (overlapX <= 0 || overlapY <= 0) continue;
         moved = true;
         if (overlapX < overlapY) {
@@ -153,8 +176,8 @@ function layout(drafts: Draft[], edges: GraphEdge[], width: number, height: numb
 }
 
 /**
- * Builds the skills graph from real content. A tool becomes a node only when at least one
- * project used it, so every link on the graph is backed by evidence.
+ * Builds the skills graph from real content. Every tool a competency lists is shown, but only
+ * tools a project actually used are marked `proven` and linked onward to that project.
  */
 export function buildSkillGraph(skills: SkillRecord[], projects: Project[]): SkillGraph {
   const usedByProjects = new Set(projects.flatMap((project) => (project.stack ?? []).map(toolKey)));
@@ -171,7 +194,7 @@ export function buildSkillGraph(skills: SkillRecord[], projects: Project[]): Ski
   for (const skill of skills) {
     for (const tool of skill.tools ?? []) {
       const key = toolKey(tool);
-      if (!usedByProjects.has(key)) continue;
+      if (!key) continue;
       if (!toolLabels.has(key)) toolLabels.set(key, tool.trim());
       addEdge(competencyId(skill.id), toolId(tool));
     }
@@ -182,12 +205,19 @@ export function buildSkillGraph(skills: SkillRecord[], projects: Project[]): Ski
     }
   }
 
+  const provenKeys = new Set([...toolLabels.keys()].filter((key) => usedByProjects.has(key)));
   const drafts: Draft[] = [
-    ...skills.map((skill) => ({ id: competencyId(skill.id), kind: "competency" as const, label: skill.name, ...sizeFor("competency", skill.name) })),
-    ...[...toolLabels.values()].map((label) => ({ id: toolId(label), kind: "tool" as const, label, ...sizeFor("tool", label) })),
+    ...skills.map((skill) => {
+      const proven = (skill.tools ?? []).some((tool) => provenKeys.has(toolKey(tool)));
+      return { id: competencyId(skill.id), kind: "competency" as const, label: skill.name, proven, ...sizeFor("competency", skill.name, proven) };
+    }),
+    ...[...toolLabels].map(([key, label]) => {
+      const proven = provenKeys.has(key);
+      return { id: toolId(label), kind: "tool" as const, label, proven, ...sizeFor("tool", label, proven) };
+    }),
     ...projects.map((project) => {
       const label = truncate(project.title, MAX_PROJECT_LABEL);
-      return { id: projectId(project.slug), kind: "project" as const, label, ...sizeFor("project", label) };
+      return { id: projectId(project.slug), kind: "project" as const, label, proven: true, ...sizeFor("project", label, true) };
     }),
   ];
 

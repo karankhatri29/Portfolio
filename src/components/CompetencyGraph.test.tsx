@@ -21,14 +21,17 @@ function setup() {
 }
 
 describe("CompetencyGraph", () => {
-  it("draws every competency, project and evidenced tool as a node", () => {
+  it("draws every competency, project and listed tool as a node", () => {
     const { node } = setup();
 
-    expect(node(/AI and NLP/)).toBeInTheDocument();
-    expect(node(/Databases/)).toBeInTheDocument();
-    expect(node(/Email Triage/)).toBeInTheDocument();
-    expect(node(/spaCy/)).toBeInTheDocument();
-    expect(within(screen.getByRole("group", { name: /skills knowledge graph/i })).queryByRole("button", { name: /NLTK/ })).not.toBeInTheDocument();
+    for (const name of [/AI and NLP/, /Databases/, /Email Triage/, /spaCy/, /NLTK/, /SQLite/]) expect(node(name)).toBeInTheDocument();
+  });
+
+  it("summarises the size of the skill set", () => {
+    setup();
+
+    expect(screen.getByText("Shipped in projects").previousElementSibling).toHaveTextContent("2");
+    expect(screen.getByText("Tools").previousElementSibling).toHaveTextContent("3");
   });
 
   it("starts with an overview listing each competency", () => {

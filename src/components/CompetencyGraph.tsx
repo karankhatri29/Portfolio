@@ -15,7 +15,7 @@ const chip = "rounded-full border px-3 py-1 text-xs";
 
 function Chip({ label, id, active, onSelect }: { label: string; id: string; active?: boolean; onSelect?: Select }) {
   const tone = active ? "border-accent/60 text-ink" : "border-ink/15 text-muted";
-  if (!onSelect || !active) return <span className={`${chip} ${tone}`}>{label}</span>;
+  if (!onSelect) return <span className={`${chip} ${tone}`}>{label}</span>;
   return (
     <button type="button" onClick={() => onSelect(id)} className={`${chip} ${tone} transition-colors hover:border-accent hover:text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent`}>
       {label}
@@ -25,7 +25,7 @@ function Chip({ label, id, active, onSelect }: { label: string; id: string; acti
 
 function Detail({ id, graph, skills, projects, onSelect }: Props & { id: string; onSelect?: Select }) {
   const linked = (of: string) => graph.edges.flatMap((edge) => (edge.source === of ? [edge.target] : edge.target === of ? [edge.source] : []));
-  const usedTools = new Set(graph.nodes.filter((node) => node.kind === "tool").map((node) => node.id));
+  const usedTools = new Set(graph.nodes.filter((node) => node.kind === "tool" && node.proven).map((node) => node.id));
   const projectBySlug = (nodeId: string) => projects.find((project) => projectId(project.slug) === nodeId);
   const skillById = (nodeId: string) => skills.find((skill) => competencyId(skill.id) === nodeId);
   const toolLabel = (nodeId: string) => graph.nodes.find((node) => node.id === nodeId)?.label ?? nodeId;
@@ -46,7 +46,7 @@ function Detail({ id, graph, skills, projects, onSelect }: Props & { id: string;
             <ul className="mt-3 flex flex-wrap gap-2">
               {skill.tools.map((tool) => <li key={tool}><Chip label={tool} id={toolId(tool)} active={usedTools.has(toolId(tool))} onSelect={onSelect} /></li>)}
             </ul>
-            <p className="mt-2 text-xs text-muted">Highlighted tools were used in a project below.</p>
+            <p className="mt-2 text-xs text-muted">Highlighted tools were used in a project below; the rest are skills I work with but haven&apos;t listed a project for yet.</p>
           </>
         ) : null}
         <p className={label}>Proven in</p>
@@ -97,7 +97,9 @@ function Detail({ id, graph, skills, projects, onSelect }: Props & { id: string;
       <p className={label}>Part of</p>
       <ul className="mt-3 flex flex-wrap gap-2">{owners.map((item) => <li key={item.id}><Chip label={item.name} id={competencyId(item.id)} active onSelect={onSelect} /></li>)}</ul>
       <p className={label}>Used in</p>
-      <ul className="mt-3 space-y-2">{users.map((item) => <li key={item.slug}><Link href={`/projects/${item.slug}`} className="font-semibold hover:text-accent">{item.title}</Link></li>)}</ul>
+      {users.length ? (
+        <ul className="mt-3 space-y-2">{users.map((item) => <li key={item.slug}><Link href={`/projects/${item.slug}`} className="font-semibold hover:text-accent">{item.title}</Link></li>)}</ul>
+      ) : <p className="mt-3 text-sm text-muted">Not linked to a listed project yet.</p>}
     </div>
   );
 }
@@ -106,7 +108,7 @@ function Overview({ skills, onSelect }: { skills: SkillRecord[]; onSelect: Selec
   return (
     <div>
       <h3 className="font-display text-2xl font-semibold">How to read this</h3>
-      <p className="mt-3 leading-7 text-muted">Each competency links to the tools I used, and each tool links to the projects that used it. Tools only appear where they shipped in real work. Select any node for the evidence.</p>
+      <p className="mt-3 leading-7 text-muted">Each competency links to the tools I work with. Tools outlined in gold were used in a project, and link on to it as evidence; dashed ones are skills without a listed project yet. Select any node to see the detail.</p>
       <ul className="mt-6 space-y-3">
         {skills.map((skill) => (
           <li key={skill.id}>
@@ -121,11 +123,24 @@ function Overview({ skills, onSelect }: { skills: SkillRecord[]; onSelect: Selec
   );
 }
 
-const pill: Record<GraphNode["kind"], { shape: string; text: string; font: string }> = {
-  competency: { shape: "fill-accent stroke-accent", text: "fill-paper", font: "text-[16px] font-semibold" },
-  project: { shape: "fill-paper stroke-ink", text: "fill-ink", font: "text-[14px] font-medium" },
-  tool: { shape: "fill-paper stroke-ink/30", text: "fill-muted", font: "text-[13px]" },
-};
+type Look = { shape: string; text: string; font: string };
+const looks = {
+  competency: { shape: "fill-accent stroke-accent", text: "fill-paper", font: "text-[18px] font-semibold" },
+  project: { shape: "fill-paper stroke-ink", text: "fill-ink", font: "text-[15px] font-medium" },
+  provenTool: { shape: "fill-paper stroke-accent", text: "fill-ink", font: "text-[14px] font-medium" },
+  tool: { shape: "fill-paper stroke-ink/25", text: "fill-muted", font: "text-[12.5px]" },
+} satisfies Record<string, Look>;
+
+const lookFor = (node: GraphNode): Look => (node.kind === "tool" ? (node.proven ? looks.provenTool : looks.tool) : looks[node.kind]);
+
+function Stat({ value, label }: { value: number; label: string }) {
+  return (
+    <div className="text-center">
+      <p className="font-display text-3xl font-semibold text-accent sm:text-4xl">{value}</p>
+      <p className="mt-1 text-xs uppercase tracking-[0.16em] text-muted">{label}</p>
+    </div>
+  );
+}
 
 export function CompetencyGraph({ graph, skills, projects }: Props) {
   const [selected, setSelected] = useState<string | null>(null);
@@ -134,6 +149,11 @@ export function CompetencyGraph({ graph, skills, projects }: Props) {
   const focusId = hovered ?? selected;
   const lit = useMemo(() => (focusId ? highlightSet(graph, focusId) : null), [graph, focusId]);
   const nodes = useMemo(() => new Map(graph.nodes.map((node) => [node.id, node])), [graph]);
+  const counts = useMemo(() => {
+    const tools = graph.nodes.filter((node) => node.kind === "tool");
+    return { skills: skills.length, tools: tools.length, proven: tools.filter((node) => node.proven).length, projects: projects.length };
+  }, [graph, skills.length, projects.length]);
+  const order = useMemo(() => new Map(graph.nodes.map((node, index) => [node.id, index])), [graph]);
 
   const toggle: Select = (id) => setSelected((current) => (current === id ? null : id));
   const onKeyDown = (event: KeyboardEvent<SVGGElement>, id: string) => {
@@ -146,21 +166,29 @@ export function CompetencyGraph({ graph, skills, projects }: Props) {
   return (
     <section aria-labelledby="competencies-title" className="border-b border-ink/10 py-16 lg:py-24" onKeyDown={(event) => { if (event.key === "Escape") setSelected(null); }}>
       <h2 id="competencies-title" className="text-center font-display text-3xl font-semibold lg:text-4xl">Core competencies</h2>
-      <p className="mx-auto mt-3 max-w-xl text-center text-sm text-muted">Skills linked to the tools and projects that prove them.</p>
+      <p className="mx-auto mt-3 max-w-xl text-center text-sm text-muted">Skills linked to the tools I use and the projects that prove them.</p>
+      <div className="mx-auto mt-10 grid max-w-2xl grid-cols-4 gap-4">
+        <Stat value={counts.skills} label="Competencies" />
+        <Stat value={counts.tools} label="Tools" />
+        <Stat value={counts.proven} label="Shipped in projects" />
+        <Stat value={counts.projects} label="Projects" />
+      </div>
 
-      <div className="mt-12 hidden gap-10 lg:grid lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+      <div className="mt-10 hidden gap-8 lg:grid lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)]">
         <div>
           <svg viewBox={`0 0 ${graph.width} ${graph.height}`} role="group" aria-label="Skills knowledge graph" className="h-auto w-full" onMouseLeave={() => setHovered(null)}>
             <g aria-hidden="true">
               {graph.edges.map((edge) => {
                 const a = nodes.get(edge.source)!;
                 const b = nodes.get(edge.target)!;
+                const evidence = edge.target.startsWith("project:");
                 const on = !lit || (lit.has(edge.source) && lit.has(edge.target));
-                return <line key={`${edge.source}-${edge.target}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} className={`transition-opacity duration-200 ${on && lit ? "stroke-accent" : "stroke-ink"} ${on ? (lit ? "opacity-90" : "opacity-25") : "opacity-[0.06]"}`} strokeWidth={on && lit ? 2 : 1} />;
+                const tone = lit && on ? "stroke-accent opacity-90" : on ? (evidence ? "stroke-accent opacity-50" : "stroke-ink opacity-[0.18]") : "stroke-ink opacity-[0.05]";
+                return <line key={`${edge.source}-${edge.target}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} className={`transition-opacity duration-200 ${tone}`} strokeWidth={lit && on ? 2 : evidence ? 1.5 : 1} />;
               })}
             </g>
             {graph.nodes.map((node) => {
-              const style = pill[node.kind];
+              const style = lookFor(node);
               const interactive = node.kind !== "tool";
               const isSelected = selected === node.id;
               const dim = lit && !lit.has(node.id);
@@ -177,10 +205,11 @@ export function CompetencyGraph({ graph, skills, projects }: Props) {
                   onMouseEnter={() => setHovered(node.id)}
                   onFocus={() => setHovered(node.id)}
                   onBlur={() => setHovered(null)}
-                  className={`group cursor-pointer outline-none transition-opacity duration-200 ${dim ? "opacity-20" : "opacity-100"}`}
+                  className={`graph-node group cursor-pointer outline-none transition-opacity duration-200 ${dim ? "opacity-20" : "opacity-100"}`}
+                  style={{ animationDelay: `${(node.kind === "competency" ? 0 : node.kind === "tool" ? 150 : 450) + (order.get(node.id) ?? 0) * 12}ms` }}
                 >
                   <rect x={-node.width / 2 - 4} y={-node.height / 2 - 4} width={node.width + 8} height={node.height + 8} rx={(node.height + 8) / 2} className={`fill-none stroke-accent stroke-2 transition-opacity ${isSelected ? "opacity-100" : "opacity-0 group-focus-visible:opacity-100"}`} />
-                  <rect x={-node.width / 2} y={-node.height / 2} width={node.width} height={node.height} rx={node.kind === "project" ? 6 : node.height / 2} className={style.shape} strokeWidth={1.5} />
+                  <rect x={-node.width / 2} y={-node.height / 2} width={node.width} height={node.height} rx={node.kind === "project" ? 6 : node.height / 2} className={style.shape} strokeWidth={node.kind === "tool" && !node.proven ? 1 : 1.5} strokeDasharray={node.kind === "tool" && !node.proven ? "3 3" : undefined} />
                   <text textAnchor="middle" dominantBaseline="central" className={`${style.text} ${style.font} select-none`}>{node.label}</text>
                 </g>
               );
@@ -188,7 +217,8 @@ export function CompetencyGraph({ graph, skills, projects }: Props) {
           </svg>
           <ul className="mt-4 flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs text-muted" aria-label="Legend">
             <li className="flex items-center gap-2"><span aria-hidden="true" className="h-3 w-5 rounded-full bg-accent" />Competency</li>
-            <li className="flex items-center gap-2"><span aria-hidden="true" className="h-3 w-5 rounded-full border border-ink/30" />Tool used in a project</li>
+            <li className="flex items-center gap-2"><span aria-hidden="true" className="h-3 w-5 rounded-full border border-accent" />Tool used in a project</li>
+            <li className="flex items-center gap-2"><span aria-hidden="true" className="h-3 w-5 rounded-full border border-dashed border-ink/40" />Other tool</li>
             <li className="flex items-center gap-2"><span aria-hidden="true" className="h-3 w-5 rounded-sm border border-ink" />Project</li>
           </ul>
         </div>
