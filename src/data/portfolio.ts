@@ -33,7 +33,7 @@ export const portfolioContent: PortfolioContent = {
   eyebrow: "Integrated M.Tech CSE student / builder",
   headline: "I build intelligent systems that turn messy information into useful decisions.",
   summary: "Computer science engineer at VIT Vellore working across Python, web systems, NLP, knowledge graphs, and applied AI.",
-  navigation: ["Work", "Writing", "About"],
+  navigation: ["Work", "Writing", "About", "Contact"],
   timeline: [
     { year: "May 2026 - now", title: "Backend developer", organization: "Edge-Native Email Triage Framework", summary: "Building a knowledge-graph-backed Gmail pipeline with OAuth 2.0, spaCy, NetworkX, LangChain, and SQLite.", tags: ["OAuth 2.0", "spaCy", "NetworkX", "LangChain", "SQLite"] },
     { year: "Nov 2025 - Feb 2026", title: "Data analyst", organization: "Context-Aware Recommendation Engine", summary: "Designed NLP intent extraction and retrieval-style ranking over contextual location signals.", tags: ["NLP", "Intent extraction", "Retrieval ranking", "Python"] },
@@ -43,7 +43,7 @@ export const portfolioContent: PortfolioContent = {
   contactLinks: [
     { label: "Email Karan", href: "mailto:karankhatri2924@gmail.com", icon: "email" },
     { label: "Karan on GitHub", href: "https://github.com/karankhatri29", icon: "github" },
-    { label: "Karan on LinkedIn", href: "http://www.linkedin.com/in/karan-khatri-46729a277", icon: "linkedin" },
+    { label: "Karan on LinkedIn", href: "https://www.linkedin.com/in/karan-khatri-46729a277", icon: "linkedin" },
     { label: "Call Karan", href: "tel:+917995646526", icon: "phone" },
   ],
   about: {

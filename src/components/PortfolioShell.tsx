@@ -25,7 +25,7 @@ export function PortfolioShell({ children, session }: { children: React.ReactNod
         </div>
       </header>
       <main id="main-content">{children}</main>
-      <div className="mx-auto max-w-6xl px-5 lg:px-8"><ContactFooter links={portfolioContent.contactLinks} /></div>
+      <div className="mx-auto max-w-6xl px-5 lg:px-8"><ContactFooter links={portfolioContent.contactLinks} name={portfolioContent.name} /></div>
     </div>
   );
 }
