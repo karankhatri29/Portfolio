@@ -1,22 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { useTheme } from "next-themes";
+
+const subscribeToNothing = () => () => {};
 
 export function ThemeToggle({ className = "" }: { className?: string }) {
   const { theme, setTheme } = useTheme();
   const [pendingTheme, setPendingTheme] = useState<"dark" | "light" | null>(null);
-  const isLight = (pendingTheme ?? theme) === "light";
+  // false while rendering on the server and during hydration, true afterwards. The server cannot know the
+  // visitor's saved theme, so both must render the same neutral toggle first or React rebuilds the whole page.
+  const mounted = useSyncExternalStore(subscribeToNothing, () => true, () => false);
+  const isLight = mounted && (pendingTheme ?? theme) === "light";
 
   return (
     <button
       type="button"
       className={`flex items-center gap-2 rounded-full border border-ink/20 p-2.5 text-sm font-semibold text-ink transition hover:border-accent hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:px-3 sm:py-2 ${className}`}
-      aria-label={isLight ? "Switch to dark theme" : "Switch to light theme"}
-      aria-pressed={isLight}
+      aria-label={!mounted ? "Toggle theme" : isLight ? "Switch to dark theme" : "Switch to light theme"}
+      aria-pressed={mounted ? isLight : undefined}
       onClick={() => {
-        const nextThemeIsLight = !isLight;
-        const nextTheme = nextThemeIsLight ? "light" : "dark";
+        const nextTheme = isLight ? "dark" : "light";
         setPendingTheme(nextTheme);
         setTheme(nextTheme);
       }}
