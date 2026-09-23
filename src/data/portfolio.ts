@@ -12,12 +12,26 @@ export type TimelineItem = {
 
 export type ContactLink = { label: string; href: string; icon: "email" | "github" | "linkedin" | "phone" };
 
+/** A headline figure; `value` counts up when it scrolls into view. */
+export type AboutStat = { value: number; decimals?: number; suffix?: string; label: string; detail: string };
+
+/** Evidence for one working principle. `principle` must match an entry in `principles`. */
+export type PrincipleProof = { principle: string; proof: string; href: string };
+
+/** `start` and `end` are "YYYY-MM"; they drive the progress bar and the "year X of Y" label. */
+export type Degree = { institution: string; program: string; start: string; end: string; grade: string };
+
 export type AboutContent = {
   introduction: string;
   detail: string;
+  stats: AboutStat[];
   principles: string[];
+  proof: PrincipleProof[];
+  degree: Degree;
+  /** Earlier education, shown under the degree. */
   education: string[];
   recognition: string[];
+  certifications: string[];
   leadership: string[];
 };
 
@@ -66,9 +80,23 @@ export const portfolioContent: PortfolioContent = {
   about: {
     introduction: "I am Karan Kaushik Khatri, an Integrated M.Tech Computer Science Engineering student at VIT Vellore with a 9.42 CGPA.",
     detail: "I work across backend engineering, data analysis, NLP, knowledge graphs, web development, and blockchain systems. I enjoy building practical tools that connect messy real-world data to clear workflows, from Gmail obligation graphs to context-aware recommendations.",
+    stats: [
+      { value: 9.42, decimals: 2, label: "CGPA", detail: "Integrated M.Tech CSE, VIT Vellore" },
+      { value: 45, suffix: "%", label: "less inspection time", detail: "Caterpillar Hackathon finalist, 2024" },
+      { value: 55, suffix: "%", label: "smaller files", detail: "Up to, with lossless recovery verified" },
+      { value: 3, label: "leadership roles", detail: "Programme rep, graVITas and Riviera" },
+    ],
     principles: ["Build from the data and the user problem.", "Make complex systems explainable.", "Measure outcomes, not just activity.", "Keep learning close to the work."],
-    education: ["Vellore Institute of Technology, Vellore - Integrated M.Tech CSE, 2022 - 2027, CGPA 9.42", "Sri Chaitanya Junior College, Hyderabad - Intermediate MPC, 2020 - 2022, 97.6%"],
-    recognition: ["Caterpillar Hackathon finalist, 2024 - voice inspection system reduced inspection time by 45%.", "DBMS - Infosys Springboard", "Azure AI Fundamentals - Microsoft", "Scrum - Agile - TCS"],
+    proof: [
+      { principle: "Build from the data and the user problem.", proof: "Context-Aware Recommendation Engine", href: "/projects/context-aware-recommendation-engine" },
+      { principle: "Make complex systems explainable.", proof: "Email Triage's task dependency graph", href: "/projects/edge-native-email-triage" },
+      { principle: "Measure outcomes, not just activity.", proof: "Up to 55% smaller files, recovery verified lossless", href: "/projects/smart-data-compression" },
+      { principle: "Keep learning close to the work.", proof: "Azure AI Fundamentals, DBMS and Scrum certifications", href: "#credentials" },
+    ],
+    degree: { institution: "Vellore Institute of Technology, Vellore", program: "Integrated M.Tech CSE", start: "2022-08", end: "2027-06", grade: "CGPA 9.42" },
+    education: ["Sri Chaitanya Junior College, Hyderabad - Intermediate MPC, 2020 - 2022, 97.6%"],
+    recognition: ["Caterpillar Hackathon finalist, 2024 - voice inspection system reduced inspection time by 45%."],
+    certifications: ["DBMS - Infosys Springboard", "Azure AI Fundamentals - Microsoft", "Scrum - Agile - TCS"],
     leadership: ["Programme Representative, Integrated M.Tech CSE (22MIC)", "Manager, Purchase Department - graVITas’25 and Riviera’26", "Coordinator - graVITas’24 and Riviera’25"],
   },
 };
