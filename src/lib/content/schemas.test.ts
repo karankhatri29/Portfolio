@@ -1,4 +1,4 @@
-import { validateProjectInput, validateSkillInput } from "@/lib/content/schemas";
+import { validatePostInput, validateProjectInput, validateSkillInput } from "@/lib/content/schemas";
 
 describe("validateProjectInput", () => {
   const validProject = {
@@ -101,5 +101,38 @@ describe("case study fields", () => {
 
   it("allows clearing a link with an empty string", () => {
     expect(validateProjectInput({ ...base, liveUrl: "" })).toMatchObject({ valid: true, data: { liveUrl: "" } });
+  });
+});
+
+describe("validatePostInput", () => {
+  const post = { slug: "hello-world", title: "Hello World", date: "2026-09-01", summary: "A first post.", content: "## Hi\n\nText.", tags: ["AI", "ai", " Machine Learning "], status: "draft" };
+
+  it("accepts a complete post and normalises tags (lowercased, de-duplicated)", () => {
+    expect(validatePostInput(post)).toEqual({ valid: true, data: { ...post, tags: ["ai", "machine-learning"] } });
+  });
+
+  it("defaults to no tags", () => {
+    const { tags: _tags, ...rest } = post;
+
+    expect(validatePostInput(rest)).toMatchObject({ valid: true, data: { tags: [] } });
+  });
+
+  it.each([
+    ["a missing slug", { slug: "" }, "slug is required"],
+    ["an unsafe slug", { slug: "Hello World!" }, "slug must be lowercase letters, numbers, and hyphens only"],
+    ["a missing title", { title: " " }, "title is required"],
+    ["an impossible date", { date: "2026-02-30" }, "date must be a real date written as YYYY-MM-DD"],
+    ["a wordy date", { date: "September 1" }, "date must be a real date written as YYYY-MM-DD"],
+    ["a long summary", { summary: "x".repeat(301) }, "summary must be 300 characters or fewer"],
+    ["empty content", { content: "" }, "content is required"],
+    ["huge content", { content: "x".repeat(100_001) }, "content must be at most 100000 characters"],
+    ["an unknown status", { status: "archived" }, "status must be draft or published"],
+    ["too many tags", { tags: Array.from({ length: 9 }, (_, i) => `tag${i}`) }, "use at most 8 tags"],
+    ["non-text tags", { tags: [1, 2] }, "tags must be a list of text"],
+  ])("rejects %s", (_label, extra, message) => {
+    const result = validatePostInput({ ...post, ...extra });
+
+    expect(result.valid).toBe(false);
+    if (!result.valid) expect(result.errors).toContain(message);
   });
 });

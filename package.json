@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "test": "jest --runInBand",
     "test:watch": "jest --watch",
-    "db:migrate": "node --env-file=.env.local node_modules/ts-node/dist/bin.js --project scripts/tsconfig.json scripts/migrate.ts"
+    "db:migrate": "node --env-file=.env.local node_modules/ts-node/dist/bin.js --project scripts/tsconfig.json scripts/migrate.ts",
+    "db:migrate:ci": "node node_modules/ts-node/dist/bin.js --project scripts/tsconfig.json scripts/migrate.ts"
   },
   "keywords": [],
   "author": "",
@@ -17,8 +18,10 @@
   "description": "",
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
+    "@vercel/blob": "^2.8.0",
     "autoprefixer": "^10.5.5",
     "gray-matter": "^4.0.3",
+    "highlight.js": "^11.12.0",
     "next": "^16.3.4",
     "next-auth": "^5.0.0-beta.32",
     "next-themes": "^0.4.6",
@@ -26,6 +29,7 @@
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-markdown": "^10.1.0",
+    "rehype-highlight": "^7.0.2",
     "tailwindcss": "^3.4.17"
   },
   "devDependencies": {

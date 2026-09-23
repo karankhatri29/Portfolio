@@ -1,4 +1,8 @@
+import fs from "node:fs";
+import path from "node:path";
+
 import { neon } from "@neondatabase/serverless";
+import matter from "gray-matter";
 
 // One-time snapshot of the hardcoded content this migration replaces. Source of truth
 // moves to Postgres after this runs; src/data/portfolio.ts no longer carries these fields.
@@ -18,9 +22,20 @@ const seedSkills = [
   { name: "Databases", description: "PostgreSQL, MySQL, MongoDB, SQLite, and Tableau.", tools: ["PostgreSQL", "MySQL", "MongoDB", "SQLite", "Tableau"] },
 ];
 
+// YAML dates such as 2026-09-01 are parsed into Date objects by gray-matter.
+function frontMatterDate(value: unknown): string {
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  return typeof value === "string" ? value.slice(0, 10) : "";
+}
+
 async function main() {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
+    // A hosted build without a database (for example a fork's preview) should still build.
+    if (process.env.VERCEL) {
+      console.log("DATABASE_URL is not set on this build, skipping migration.");
+      return;
+    }
     throw new Error("DATABASE_URL is not set. Run `vercel env pull .env.local` first.");
   }
 
@@ -107,6 +122,21 @@ async function main() {
   await sql`CREATE INDEX IF NOT EXISTS error_logs_created_idx ON error_logs (created_at)`;
 
   await sql`
+    CREATE TABLE IF NOT EXISTS posts (
+      slug TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      date TEXT NOT NULL DEFAULT '',
+      summary TEXT NOT NULL DEFAULT '',
+      content TEXT NOT NULL DEFAULT '',
+      tags JSONB NOT NULL DEFAULT '[]'::jsonb,
+      status TEXT NOT NULL DEFAULT 'draft',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS posts_status_date_idx ON posts (status, date)`;
+
+  await sql`
     CREATE TABLE IF NOT EXISTS highlights (
       id TEXT PRIMARY KEY,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -142,6 +172,26 @@ async function main() {
     console.log(`Seeded ${seedSkills.length} competencies.`);
   } else {
     console.log(`competencies already has ${skillCount} rows, skipping seed.`);
+  }
+
+  // One-time import of the original Markdown posts; after this the database is the source of truth.
+  const [{ count: postCount }] = (await sql`SELECT COUNT(*)::int AS count FROM posts`) as { count: number }[];
+  const blogDirectory = path.join(process.cwd(), "src", "content", "blog");
+  if (postCount === 0 && fs.existsSync(blogDirectory)) {
+    let imported = 0;
+    for (const fileName of fs.readdirSync(blogDirectory).filter((name) => name.endsWith(".md"))) {
+      const slug = fileName.replace(/\.md$/, "");
+      const parsed = matter(fs.readFileSync(path.join(blogDirectory, fileName), "utf8"));
+      const tags = Array.isArray(parsed.data.tags) ? parsed.data.tags.filter((tag: unknown): tag is string => typeof tag === "string") : [];
+      await sql`
+        INSERT INTO posts (slug, title, date, summary, content, tags, status)
+        VALUES (${slug}, ${typeof parsed.data.title === "string" ? parsed.data.title : slug}, ${frontMatterDate(parsed.data.date)}, ${typeof parsed.data.summary === "string" ? parsed.data.summary : ""}, ${parsed.content.trim()}, ${JSON.stringify(tags)}::jsonb, 'published')
+      `;
+      imported++;
+    }
+    console.log(`Imported ${imported} blog posts.`);
+  } else {
+    console.log(`posts already has ${postCount} rows, skipping import.`);
   }
 
   // Backfill rows seeded before the columns existed; never overwrites values edited since.

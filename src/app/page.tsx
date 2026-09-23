@@ -21,14 +21,14 @@ import { buildSkillGraph } from "@/lib/skills/graph";
 export default async function Page() {
   const githubUser = githubUsername(portfolioContent.contactLinks);
   // Optional sections must never take the page down: a missing table or GitHub outage just hides them.
-  const [session, projects, skills, highlights, github] = await Promise.all([
+  const [session, projects, skills, highlights, github, writing] = await Promise.all([
     auth(),
     listProjects(),
     listSkills(),
     listHighlights().catch(() => []),
     githubUser ? getGithubActivity(githubUser) : Promise.resolve(null),
+    listBlogPosts().catch(() => []),
   ]);
-  const writing = listBlogPosts();
   const skillGraph = buildSkillGraph(skills, projects);
   const githubProfile = portfolioContent.contactLinks.find((link) => link.icon === "github")?.href;
 

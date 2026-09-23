@@ -1,3 +1,5 @@
+import { isValidPostDate, normalizeTag } from "@/lib/content/blog-utils";
+import type { BlogPost } from "@/lib/content/blog";
 import { HIGHLIGHT_KINDS } from "@/lib/content/highlight-kinds";
 import type { HighlightKind } from "@/lib/content/highlight-kinds";
 import type { Highlight, Project, ProjectImage, SkillRecord } from "@/lib/content/repository";
@@ -162,4 +164,47 @@ export function validateHighlightInput(payload: unknown): ValidationResult<Omit<
 
   if (errors.length > 0) return { valid: false, errors };
   return { valid: true, data: { kind, title, subtitle, body, ...(url ? { url } : {}) } };
+}
+
+const MAX_POST_CONTENT = 100_000;
+const MAX_TAGS = 8;
+
+export function validatePostInput(payload: unknown): ValidationResult<BlogPost> {
+  const errors: string[] = [];
+  const record = typeof payload === "object" && payload !== null ? (payload as Record<string, unknown>) : {};
+
+  const slug = typeof record.slug === "string" ? record.slug.trim() : "";
+  if (!slug) errors.push("slug is required");
+  else if (!safeSlug.test(slug)) errors.push("slug must be lowercase letters, numbers, and hyphens only");
+
+  const title = typeof record.title === "string" ? record.title.trim() : "";
+  if (!title) errors.push("title is required");
+  else if (title.length > 200) errors.push("title must be 200 characters or fewer");
+
+  const date = typeof record.date === "string" ? record.date.trim() : "";
+  if (!isValidPostDate(date)) errors.push("date must be a real date written as YYYY-MM-DD");
+
+  const summary = typeof record.summary === "string" ? record.summary.trim() : "";
+  if (!summary) errors.push("summary is required");
+  else if (summary.length > 300) errors.push("summary must be 300 characters or fewer");
+
+  const content = typeof record.content === "string" ? record.content.trim() : "";
+  if (!content) errors.push("content is required");
+  else if (content.length > MAX_POST_CONTENT) errors.push(`content must be at most ${MAX_POST_CONTENT} characters`);
+
+  let tags: string[] = [];
+  if (record.tags !== undefined) {
+    if (!Array.isArray(record.tags) || !record.tags.every((tag) => typeof tag === "string")) {
+      errors.push("tags must be a list of text");
+    } else {
+      tags = [...new Set((record.tags as string[]).map(normalizeTag).filter(Boolean))];
+      if (tags.length > MAX_TAGS) errors.push(`use at most ${MAX_TAGS} tags`);
+    }
+  }
+
+  const status = record.status;
+  if (status !== "draft" && status !== "published") errors.push("status must be draft or published");
+
+  if (errors.length > 0) return { valid: false, errors };
+  return { valid: true, data: { slug, title, date, summary, content, tags, status: status as BlogPost["status"] } };
 }

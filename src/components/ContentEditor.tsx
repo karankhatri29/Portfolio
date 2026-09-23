@@ -3,6 +3,8 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 
+import { ImageUploadButton } from "@/components/ImageUploadButton";
+
 import type { Highlight, HighlightKind, Project, SkillRecord } from "@/lib/content/repository";
 
 type Status =
@@ -165,6 +167,7 @@ function ProjectEditor({ initialProjects }: { initialProjects: Project[] }) {
           <label className="block text-sm font-medium">Screenshots (one per line: https link | short description)
             <textarea className={inputClass} rows={4} placeholder="https://.../dashboard.png | Dashboard showing the email graph" value={form.images} onChange={(event) => setForm({ ...form, images: event.target.value })} />
           </label>
+          <ImageUploadButton label="Upload screenshot" onUploaded={(url) => setForm((current) => ({ ...current, images: `${current.images}${current.images && !current.images.endsWith("\n") ? "\n" : ""}${url} | ` }))} />
         </fieldset>
         <div className="flex flex-wrap items-center gap-4">
           <button type="submit" className={primaryButton} disabled={pending}>{editingSlug ? "Save project" : "Create project"}</button>

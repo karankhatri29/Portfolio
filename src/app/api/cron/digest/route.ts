@@ -22,7 +22,7 @@ export async function GET(request: Request) {
 
   try {
     const data = await getDashboardData(7);
-    const titles = Object.fromEntries(listBlogPosts().map((post) => [`/blog/${post.slug}`, post.title]));
+    const titles = Object.fromEntries((await listBlogPosts()).map((post) => [`/blog/${post.slug}`, post.title]));
     const digest = buildDigest(data, new URL(request.url).origin, titles);
 
     return NextResponse.json({ sent: (await sendEmail(digest)) === "sent" });

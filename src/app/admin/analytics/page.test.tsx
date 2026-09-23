@@ -9,7 +9,7 @@ import AnalyticsPage from "./page";
 jest.mock("@/auth", () => ({ auth: jest.fn() }));
 jest.mock("@/lib/analytics/repository", () => ({ getDashboardData: jest.fn() }));
 jest.mock("@/lib/content/blog", () => ({
-  listBlogPosts: () => [
+  listBlogPosts: async () => [
     { slug: "quiet-post", title: "Quiet Post", date: "2026-01-01", summary: "" },
     { slug: "popular-post", title: "Popular Post", date: "2026-02-01", summary: "" },
   ],

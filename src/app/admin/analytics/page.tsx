@@ -30,24 +30,25 @@ function pageLabel(path: string) {
 export default async function AnalyticsPage({ searchParams }: { searchParams: Promise<{ days?: string }> }) {
   const session = await auth();
   const days = readDays((await searchParams).days);
-  const data = session?.role === "Admin" ? await getDashboardData(days) : null;
+  const isAdmin = session?.role === "Admin";
+  const [data, posts] = isAdmin ? await Promise.all([getDashboardData(days), listBlogPosts().catch(() => [])]) : [null, []];
 
   return (
     <main className="mx-auto max-w-5xl px-5 py-20 lg:px-8 lg:py-28">
       <p className="text-sm font-semibold uppercase tracking-[0.2em] text-accent">Admin</p>
       <h1 className="mt-4 font-display text-5xl font-semibold tracking-tight sm:text-6xl">Analytics</h1>
       <div className="mt-14">
-        <AdminGate session={session}>{data ? <Dashboard data={data} days={days} now={new Date()} /> : null}</AdminGate>
+        <AdminGate session={session}>{data ? <Dashboard data={data} posts={posts} days={days} now={new Date()} /> : null}</AdminGate>
       </div>
     </main>
   );
 }
 
-function Dashboard({ data, days, now }: { data: NonNullable<Awaited<ReturnType<typeof getDashboardData>>>; days: number; now: Date }) {
+function Dashboard({ data, posts: blogPosts, days, now }: { data: NonNullable<Awaited<ReturnType<typeof getDashboardData>>>; posts: { slug: string; title: string }[]; days: number; now: Date }) {
   const { summary } = data;
   const blogViews = new Map(data.blog.map((row) => [row.path, row]));
   const engagement = new Map(data.engagement.map((row) => [row.path, row]));
-  const posts = listBlogPosts()
+  const posts = blogPosts
     .map((post) => {
       const stat = blogViews.get(`/blog/${post.slug}`);
       return { title: post.title, slug: post.slug, views: stat?.views ?? 0, visitors: stat?.visitors ?? 0, previous: stat?.previousViews ?? 0, reading: engagement.get(`/blog/${post.slug}`) };
