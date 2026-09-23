@@ -119,6 +119,18 @@ Sign in and open `/admin`:
 ### [ ] 22. Keep your database migrations in step
 Every deploy now runs `npm run db:migrate:ci` first, so new tables and columns are created automatically and safely (it only adds things and imports your original blog posts once). If a deploy fails at that step, check that `DATABASE_URL` is set for that environment.
 
+### [ ] 6d. Turn on the "ask Karan" terminal for the live site
+The hero terminal answers questions with Gemini. It works locally because `GEMINI_API_KEY` is in `.env.local`; the live site needs it too or the terminal will say "The assistant isn't set up yet".
+1. Vercel > Project > Settings > Environment Variables > add `GEMINI_API_KEY` (Production, and Preview if you use it). Redeploy afterwards.
+2. Optional settings (all have safe defaults, only add them to change behavior):
+   - `ASK_HOURLY_LIMIT` (default 10 questions per visitor per hour) and `ASK_DAILY_LIMIT` (default 300 across the whole site).
+   - `ASK_LOG_QUESTIONS=true` to save the text of each question so you can see what recruiters ask. Off by default; the table only stores a hash and a timestamp otherwise. Read them in the Neon SQL editor: `SELECT created_at, question FROM ask_requests ORDER BY created_at DESC;`
+   - `GEMINI_MODEL` to switch models. Default is `gemini-2.5-flash`. Google retires models quickly, so if the terminal starts saying it "couldn't answer just now", check the Vercel function logs for a 404 from Gemini and set a newer model here.
+3. Set a spending or quota limit on the key in Google AI Studio / Cloud console, in case it is ever abused.
+4. The free tier has a low per-minute limit, so several visitors asking at once may see a friendly "busy" message. Moving the key to a paid tier removes that.
+5. Never paste the key into chat, an issue or a commit. If it ever leaks, delete it in Google AI Studio and create a new one.
+Already done: the `ask_requests` table was created in your Neon database (`npm run db:migrate`).
+
 ---
 
 ## P2 - Cleanup decisions
