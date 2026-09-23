@@ -20,7 +20,6 @@ describe("ContactFooter", () => {
     expect(screen.getByText("karankhatri2924@gmail.com")).toBeInTheDocument();
     expect(screen.getByText("github.com/karankhatri29")).toBeInTheDocument();
     expect(screen.getByText("linkedin.com/in/karan-khatri-46729a277")).toBeInTheDocument();
-    expect(screen.getByText("+91 79956 46526")).toBeInTheDocument();
   });
 
   it("opens external profiles safely in a new tab", () => {
@@ -29,7 +28,7 @@ describe("ContactFooter", () => {
     const github = screen.getByRole("link", { name: "Karan on GitHub" });
     expect(github).toHaveAttribute("target", "_blank");
     expect(github).toHaveAttribute("rel", "noopener noreferrer");
-    expect(screen.getByRole("link", { name: "Call Karan" })).not.toHaveAttribute("target");
+    expect(screen.getByRole("link", { name: "Email Karan" })).not.toHaveAttribute("target");
   });
 
   it("offers a primary email call to action and a contact anchor", () => {
@@ -37,5 +36,15 @@ describe("ContactFooter", () => {
 
     expect(screen.getByRole("link", { name: /say hello/i })).toHaveAttribute("href", "mailto:karankhatri2924@gmail.com");
     expect(container.querySelector("#contact")).toBeInTheDocument();
+  });
+});
+
+describe("ContactFooter privacy", () => {
+  it("does not publish a phone number", () => {
+    const { container } = render(<ContactFooter links={portfolioContent.contactLinks} />);
+
+    expect(container.querySelector('a[href^="tel:"]')).toBeNull();
+    expect(container.textContent).not.toMatch(/\+?\d[\d\s-]{8,}\d/);
+    expect(JSON.stringify(portfolioContent)).not.toMatch(/tel:|\+91/);
   });
 });

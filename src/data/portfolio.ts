@@ -48,7 +48,6 @@ export const portfolioContent: PortfolioContent = {
     { label: "Email Karan", href: "mailto:karankhatri2924@gmail.com", icon: "email" },
     { label: "Karan on GitHub", href: "https://github.com/karankhatri29", icon: "github" },
     { label: "Karan on LinkedIn", href: "https://www.linkedin.com/in/karan-khatri-46729a277", icon: "linkedin" },
-    { label: "Call Karan", href: "tel:+917995646526", icon: "phone" },
   ],
   terminal: [
     { command: "whoami", output: "Karan Kaushik Khatri" },

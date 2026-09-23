@@ -39,7 +39,7 @@ export function ContactFooter({ links, name }: { links: ContactLink[]; name?: st
         {email ? <a href={email.href} data-track="email" className="mt-8 inline-flex items-center gap-3 rounded-full bg-accent px-7 py-3 text-sm font-semibold text-paper transition hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper">Say hello<span aria-hidden="true">→</span></a> : null}
       </div>
 
-      <nav aria-label="Contact links" className="mx-auto mt-14 grid max-w-5xl gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <nav aria-label="Contact links" className="mx-auto mt-14 grid max-w-5xl gap-4 sm:grid-cols-3">
         {links.map((link) => {
           const external = link.href.startsWith("http");
           return (
