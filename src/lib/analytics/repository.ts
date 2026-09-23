@@ -49,6 +49,8 @@ export type Behavior = {
   bounce: { total: number; single: number };
   audience: { newVisitors: number; returningVisitors: number };
 };
+export type ErrorGroup = { message: string; source: string; count: number; lastSeen: string; path: string };
+export type ErrorSummary = { total: number; groups: ErrorGroup[] };
 export type RecentActivity = { at: string; kind: "pageview" | "click" | "message"; path: string; country: string; city: string; device: string; detail: string };
 
 export type DashboardData = {
@@ -69,6 +71,7 @@ export type DashboardData = {
   engagement: EngagementStat[];
   recent: RecentActivity[];
   behavior: Behavior;
+  errors: ErrorSummary;
 };
 
 function sqlClient() {
@@ -373,8 +376,37 @@ export async function exportMessages(): Promise<string[][]> {
   return rows.map((row) => [row.time_utc, row.name, row.email, row.message, row.status]);
 }
 
+export async function recordError(report: { source: string; message: string; stack: string; path: string; digest: string }): Promise<void> {
+  const sql = sqlClient();
+  await sql`
+    INSERT INTO error_logs (source, message, stack, path, digest)
+    VALUES (${report.source}, ${report.message}, ${report.stack}, ${report.path}, ${report.digest})
+  `;
+}
+
+export async function countRecentErrors(minutes: number): Promise<number> {
+  const sql = sqlClient();
+  const rows = (await sql`SELECT COUNT(*)::int AS count FROM error_logs WHERE created_at >= now() - make_interval(mins => ${minutes}::int)`) as { count: number }[];
+  return rows[0]?.count ?? 0;
+}
+
+async function getErrors(days: number): Promise<ErrorSummary> {
+  const sql = sqlClient();
+  const groups = (await sql`
+    SELECT message, source, COUNT(*)::int AS count,
+      to_char(MAX(created_at) AT TIME ZONE 'utc', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS "lastSeen",
+      COALESCE((ARRAY_AGG(path ORDER BY created_at DESC) FILTER (WHERE path <> ''))[1], '') AS path
+    FROM error_logs
+    WHERE created_at >= now() - make_interval(days => ${days}::int)
+    GROUP BY message, source ORDER BY MAX(created_at) DESC LIMIT 10
+  `) as ErrorGroup[];
+  const totals = (await sql`SELECT COUNT(*)::int AS total FROM error_logs WHERE created_at >= now() - make_interval(days => ${days}::int)`) as { total: number }[];
+
+  return { total: totals[0]?.total ?? 0, groups };
+}
+
 export async function getDashboardData(days: number): Promise<DashboardData> {
-  const [summary, daily, topPages, blog, sources, contactClicks, messages, funnel, campaigns, countries, cities, devices, browsers, engagement, recent, behavior] = await Promise.all([
+  const [summary, daily, topPages, blog, sources, contactClicks, messages, funnel, campaigns, countries, cities, devices, browsers, engagement, recent, behavior, errors] = await Promise.all([
     getSummary(days),
     getDaily(days),
     getTopPages(days),
@@ -391,7 +423,8 @@ export async function getDashboardData(days: number): Promise<DashboardData> {
     getEngagement(days),
     getRecent(),
     getBehavior(days),
+    getErrors(days),
   ]);
 
-  return { days, summary, daily, topPages, blog, sources, contactClicks, messages, funnel, campaigns, countries, cities, devices, browsers, engagement, recent, behavior };
+  return { days, summary, daily, topPages, blog, sources, contactClicks, messages, funnel, campaigns, countries, cities, devices, browsers, engagement, recent, behavior, errors };
 }

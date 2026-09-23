@@ -19,6 +19,8 @@ export function buildDigest(data: DashboardData, siteUrl: string, blogTitles: Re
     `Messages: ${summary.messages}${summary.unreadMessages > 0 ? ` (${summary.unreadMessages} unread in total)` : ""}`,
   ];
 
+  if (data.errors.total > 0) lines.push(`Errors: ${data.errors.total} logged, worth a look on the dashboard`);
+
   if (data.topPages.length > 0) {
     lines.push("", "Top pages:");
     data.topPages.slice(0, 3).forEach((page, index) => lines.push(`  ${index + 1}. ${page.path === "/" ? "Home" : page.path} - ${page.views} views`));

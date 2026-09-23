@@ -28,6 +28,7 @@ beforeEach(() => {
     topPages: [],
     blog: [],
     sources: [],
+    errors: { total: 0, groups: [] },
   } as unknown as Awaited<ReturnType<typeof getDashboardData>>);
 });
 

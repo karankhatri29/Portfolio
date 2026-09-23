@@ -96,3 +96,14 @@ export function groupSources(rows: { source: string; visits: number; visitors: n
 
   return [...grouped.values()].sort((a, b) => b.visits - a.visits);
 }
+
+export function isSameOrigin(request: Request): boolean {
+  const origin = request.headers.get("origin");
+  if (!origin) return true;
+
+  try {
+    return new URL(origin).host === request.headers.get("host");
+  } catch {
+    return false;
+  }
+}

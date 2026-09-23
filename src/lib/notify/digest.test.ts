@@ -20,6 +20,7 @@ function data(overrides: Partial<DashboardData> = {}): DashboardData {
     engagement: [],
     recent: [],
     behavior: { entryPages: [], exitPages: [], bounce: { total: 0, single: 0 }, audience: { newVisitors: 0, returningVisitors: 0 } },
+    errors: { total: 0, groups: [] },
     ...overrides,
   };
 }
@@ -36,6 +37,11 @@ describe("buildDigest", () => {
     expect(text).toContain("Biggest source: LinkedIn (10 visits)");
     expect(text).toContain("Most read post: Systems That Breathe (40 views)");
     expect(text).toContain("Open the dashboard: https://me.example/admin/analytics");
+  });
+
+  it("flags logged errors and stays silent when there are none", () => {
+    expect(buildDigest(data({ errors: { total: 4, groups: [] } }), "https://me.example").text).toContain("Errors: 4 logged");
+    expect(buildDigest(data(), "https://me.example").text).not.toContain("Errors:");
   });
 
   it("handles a quiet week without optional sections", () => {

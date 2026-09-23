@@ -35,6 +35,7 @@ const data: DashboardData = {
   devices: [{ label: "desktop", views: 90 }, { label: "mobile", views: 30 }],
   browsers: [{ label: "Chrome", views: 100 }, { label: "Safari", views: 20 }],
   engagement: [{ path: "/blog/popular-post", avgSeconds: 95, avgScroll: 72, samples: 12 }],
+  errors: { total: 3, groups: [{ message: "Cannot read properties of undefined", source: "client", count: 3, lastSeen: "2026-09-23T11:00:00Z", path: "/blog/popular-post" }] },
   behavior: {
     entryPages: [{ path: "/", count: 30 }, { path: "/blog/popular-post", count: 10 }],
     exitPages: [{ path: "/projects/alpha", count: 12 }],
@@ -100,6 +101,20 @@ describe("analytics dashboard page", () => {
     expect(within(behavior).getByText("18 of 45 visitors looked at one page and left.")).toBeInTheDocument();
     expect(within(behavior).getByText("Returning browsers")).toBeInTheDocument();
     expect(within(behavior).getByText(/8 visitors/)).toBeInTheDocument();
+  });
+
+  it("lists grouped errors, and says so when there are none", async () => {
+    mockAuth.mockResolvedValue({ role: "Admin", user: {} });
+
+    await renderPage();
+    const section = screen.getByRole("heading", { name: "Errors" }).closest("section")!;
+    expect(within(section).getByText("3 errors in the last 30 days")).toBeInTheDocument();
+    expect(within(section).getByText("Cannot read properties of undefined")).toBeInTheDocument();
+    expect(within(section).getByText("client · /blog/popular-post")).toBeInTheDocument();
+
+    mockData.mockResolvedValue({ ...data, errors: { total: 0, groups: [] } });
+    await renderPage();
+    expect(screen.getAllByText("No errors recorded in the last 30 days.").length).toBeGreaterThan(0);
   });
 
   it("offers CSV downloads scoped to the selected range", async () => {

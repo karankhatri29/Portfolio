@@ -87,6 +87,19 @@ async function main() {
   `;
   await sql`CREATE INDEX IF NOT EXISTS contact_messages_created_idx ON contact_messages (created_at)`;
 
+  await sql`
+    CREATE TABLE IF NOT EXISTS error_logs (
+      id BIGSERIAL PRIMARY KEY,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      source TEXT NOT NULL,
+      message TEXT NOT NULL,
+      stack TEXT NOT NULL DEFAULT '',
+      path TEXT NOT NULL DEFAULT '',
+      digest TEXT NOT NULL DEFAULT ''
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS error_logs_created_idx ON error_logs (created_at)`;
+
   const [{ count: projectCount }] = (await sql`SELECT COUNT(*)::int AS count FROM projects`) as { count: number }[];
   if (projectCount === 0) {
     for (const project of seedProjects) {

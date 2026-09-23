@@ -1,22 +1,11 @@
 import { auth } from "@/auth";
 import { recordEvent } from "@/lib/analytics/repository";
-import { CONTACT_TARGETS, browserName, clampInt, deviceType, isBot, normalizePath, normalizeRefTag, referrerHost, visitorHash } from "@/lib/analytics/tracking";
+import { CONTACT_TARGETS, browserName, clampInt, deviceType, isBot, isSameOrigin, normalizePath, normalizeRefTag, referrerHost, visitorHash } from "@/lib/analytics/tracking";
 
 const skipped = () => new Response(null, { status: 204 });
 
 function clientIp(request: Request) {
   return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-}
-
-function isSameOrigin(request: Request) {
-  const origin = request.headers.get("origin");
-  if (!origin) return true;
-
-  try {
-    return new URL(origin).host === request.headers.get("host");
-  } catch {
-    return false;
-  }
 }
 
 export async function POST(request: Request) {

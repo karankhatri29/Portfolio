@@ -8,7 +8,7 @@ import { FunnelChart } from "@/components/analytics/FunnelChart";
 import { MessageInbox } from "@/components/analytics/MessageInbox";
 import { StatCard } from "@/components/analytics/StatCard";
 import { TrafficChart } from "@/components/analytics/TrafficChart";
-import { countryName, formatDuration, percentOf, plural } from "@/lib/analytics/format";
+import { countryName, formatDuration, percentOf, plural, timeAgo } from "@/lib/analytics/format";
 import { getDashboardData } from "@/lib/analytics/repository";
 import { groupSources, percentChange } from "@/lib/analytics/tracking";
 import { listBlogPosts } from "@/lib/content/blog";
@@ -214,6 +214,33 @@ function Dashboard({ data, days, now }: { data: NonNullable<Awaited<ReturnType<t
         <BarList unit="clicks" emptyText="No contact-link clicks yet." items={data.contactClicks.map((row) => ({ label: contactLabels[row.target] ?? row.target, value: row.clicks, detail: plural(row.visitors, "visitor") }))} />
         <h3 className="mt-10 text-lg font-semibold">Messages</h3>
         <MessageInbox initialMessages={data.messages} />
+      </section>
+
+      <section aria-labelledby="errors-title">
+        <h2 id="errors-title" className="font-display text-2xl font-semibold">Errors</h2>
+        <p className="mt-2 text-sm text-muted">Problems visitors hit on the site, from both the server and their browsers. Identical errors are grouped.</p>
+        {data.errors.total === 0 ? <p className="mt-4 text-sm text-muted">No errors recorded in the last {days} days.</p> : (
+          <>
+            <p className="mt-4 text-sm font-semibold text-red-700">{plural(data.errors.total, "error")} in the last {days} days</p>
+            <div className="mt-3 overflow-x-auto">
+              <table className="w-full min-w-[32rem] text-left text-sm">
+                <thead className="border-b border-ink/20 text-xs uppercase tracking-[0.12em] text-muted">
+                  <tr><th scope="col" className="py-2 pr-4">Error</th><th scope="col" className="py-2 pr-4">Where</th><th scope="col" className="py-2 pr-4 text-right">Times</th><th scope="col" className="py-2 text-right">Last seen</th></tr>
+                </thead>
+                <tbody className="divide-y divide-ink/10">
+                  {data.errors.groups.map((group) => (
+                    <tr key={`${group.source}-${group.message}`}>
+                      <th scope="row" className="py-3 pr-4 font-medium">{group.message}</th>
+                      <td className="py-3 pr-4 text-muted">{group.source}{group.path ? ` · ${group.path}` : ""}</td>
+                      <td className="py-3 pr-4 text-right tabular-nums">{group.count}</td>
+                      <td className="py-3 text-right text-muted"><time dateTime={group.lastSeen}>{timeAgo(group.lastSeen, now)}</time></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </section>
 
       <section aria-labelledby="recent-title">

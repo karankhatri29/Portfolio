@@ -47,4 +47,11 @@ describe("ContactFooter privacy", () => {
     expect(container.textContent).not.toMatch(/\+?\d[\d\s-]{8,}\d/);
     expect(JSON.stringify(portfolioContent)).not.toMatch(/tel:|\+91/);
   });
+
+  it("links to the privacy page and the RSS feed", () => {
+    render(<ContactFooter links={portfolioContent.contactLinks} />);
+
+    expect(screen.getByRole("link", { name: "Privacy" })).toHaveAttribute("href", "/privacy");
+    expect(screen.getByRole("link", { name: "RSS" })).toHaveAttribute("href", "/feed.xml");
+  });
 });

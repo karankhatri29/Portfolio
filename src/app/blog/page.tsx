@@ -1,9 +1,16 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { listBlogPosts } from "@/lib/content/blog";
 
-export default function BlogIndexPage() {
-  const posts = listBlogPosts();
+export const metadata: Metadata = {
+  title: "Writing and research",
+  description: "Notes on applied AI, NLP, knowledge graphs and building useful systems.",
+  alternates: { canonical: "/blog" },
+};
+
+export default async function BlogIndexPage() {
+  const posts = await listBlogPosts();
 
   return (
     <main className="mx-auto max-w-4xl px-5 py-20 lg:px-8 lg:py-32">

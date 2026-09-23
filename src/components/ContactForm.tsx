@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import type { FormEvent } from "react";
 
@@ -58,6 +59,7 @@ export function ContactForm() {
         <button type="submit" disabled={status.kind === "pending"} className="border border-accent px-4 py-2 text-sm font-semibold text-accent focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-paper disabled:opacity-50">
           Send message
         </button>
+        <p className="basis-full text-xs text-muted">Your message is stored so I can reply. See the <Link href="/privacy" className="underline underline-offset-4 hover:text-accent">privacy page</Link>.</p>
         {status.kind === "pending" ? <p role="status" className="text-sm text-muted">Sending...</p> : null}
         {status.kind === "success" ? <p role="status" className="text-sm text-accent">Thanks, your message was sent.</p> : null}
         {status.kind === "server" ? <p role="alert" className="text-sm text-red-700">{status.message}</p> : null}
