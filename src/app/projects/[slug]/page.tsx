@@ -1,18 +1,10 @@
 import { notFound } from "next/navigation";
 
-import { portfolioContent } from "@/data/portfolio";
-
-export function getProjectBySlug(slug: string) {
-  return portfolioContent.projects.find((project) => project.slug === slug);
-}
-
-export function generateStaticParams() {
-  return portfolioContent.projects.map((project) => ({ slug: project.slug }));
-}
+import { getProject } from "@/lib/content/repository";
 
 export default async function ProjectDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const project = getProjectBySlug(slug);
+  const project = await getProject(slug);
   if (!project) notFound();
 
   return (

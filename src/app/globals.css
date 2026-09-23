@@ -18,3 +18,9 @@
 
 html { scroll-behavior: smooth; }
 body { background: rgb(var(--color-paper)); color: rgb(var(--color-ink)); }
+
+.timeline-item[data-reveal] { transition: opacity 0.6s ease, transform 0.6s ease; }
+.timeline-item[data-reveal="hidden"] { opacity: 0; transform: translateY(16px); }
+@media (prefers-reduced-motion: reduce) {
+  .timeline-item[data-reveal="hidden"] { opacity: 1; transform: none; }
+}

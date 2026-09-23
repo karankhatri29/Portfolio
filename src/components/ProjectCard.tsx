@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import type { Project } from "@/data/portfolio";
+import type { Project } from "@/lib/content/repository";
 
 export function ProjectCard({ project }: { project: Project }) {
   return (

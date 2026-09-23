@@ -3,17 +3,7 @@ export type TimelineItem = {
   title: string;
   organization: string;
   summary: string;
-};
-
-export type Competency = { name: string; description: string };
-
-export type Project = {
-  slug: string;
-  title: string;
-  year: string;
-  summary: string;
-  role: string;
-  outcomes: string[];
+  tags?: string[];
 };
 
 export type ContactLink = { label: string; href: string; icon: "email" | "github" | "linkedin" | "phone" };
@@ -34,8 +24,6 @@ export type PortfolioContent = {
   summary: string;
   navigation: string[];
   timeline: TimelineItem[];
-  competencies: Competency[];
-  projects: Project[];
   contactLinks: ContactLink[];
   about: AboutContent;
 };
@@ -47,24 +35,10 @@ export const portfolioContent: PortfolioContent = {
   summary: "Computer science engineer at VIT Vellore working across Python, web systems, NLP, knowledge graphs, and applied AI.",
   navigation: ["Work", "Writing", "About"],
   timeline: [
-    { year: "May 2026 - now", title: "Backend developer", organization: "Edge-Native Email Triage Framework", summary: "Building a knowledge-graph-backed Gmail pipeline with OAuth 2.0, spaCy, NetworkX, LangChain, and SQLite." },
-    { year: "Nov 2025 - Feb 2026", title: "Data analyst", organization: "Context-Aware Recommendation Engine", summary: "Designed NLP intent extraction and retrieval-style ranking over contextual location signals." },
-    { year: "Apr 2025 - Aug 2025", title: "Blockchain developer", organization: "Blockchain Based Marketplace", summary: "Built a decentralized NFT marketplace with Solidity, Ethereum PoS, IPFS, and React." },
-    { year: "Mar 2025 - May 2025", title: "Data analyst", organization: "Smart Data Compression Algorithm", summary: "Developed adaptive compression with up to 55% size reduction and verified lossless recovery." },
-  ],
-  competencies: [
-    { name: "Python and data", description: "Python, Pandas, NumPy, Scikit-Learn, Matplotlib, SQL, and statistical modeling." },
-    { name: "Web development", description: "React.js, Node.js/Express, Vite, JavaScript, HTML5, and CSS3." },
-    { name: "AI and NLP", description: "spaCy, NLTK, LangChain, semantic intent extraction, and retrieval-style ranking." },
-    { name: "Knowledge graphs", description: "NetworkX graph construction and analysis for dependency-aware workflows." },
-    { name: "Cloud and delivery", description: "Git, Docker, Microsoft Azure, Google APIs, Vercel, CI/CD, Bash, and PowerShell." },
-    { name: "Databases", description: "PostgreSQL, MySQL, MongoDB, SQLite, and Tableau." },
-  ],
-  projects: [
-    { slug: "edge-native-email-triage", title: "Edge-Native Email Triage Framework", year: "2026 - present", summary: "A knowledge-graph-backed pipeline that ingests Gmail data, extracts obligations, and maps task dependencies.", role: "Backend developer", outcomes: ["Live Gmail ingestion through OAuth 2.0", "spaCy obligation extraction", "NetworkX dependency analysis persisted to SQLite"] },
-    { slug: "context-aware-recommendation-engine", title: "Context-Aware Recommendation Engine", year: "2025 - 2026", summary: "A retrieval-style recommendation engine that extracts semantic intent and ranks locations against live contextual signals.", role: "Data analyst", outcomes: ["Modular Node.js retrieval API", "Google API aggregation", "Time-decay preference scoring"] },
-    { slug: "blockchain-marketplace", title: "Blockchain Based Marketplace", year: "2025", summary: "A decentralized NFT marketplace built on Ethereum PoS with IPFS storage and wallet integration.", role: "Blockchain developer", outcomes: ["Solidity smart contracts", "IPFS asset storage", "Encrypted user data and automated watermarking"] },
-    { slug: "smart-data-compression", title: "Smart Data Compression Algorithm", year: "2025", summary: "An adaptive compression system that selects algorithms based on file characteristics and verifies recovery integrity.", role: "Data analyst", outcomes: ["Up to 55% single-file size reduction", "Lossless recovery validation", "Bash-driven automation with PostgreSQL"] },
+    { year: "May 2026 - now", title: "Backend developer", organization: "Edge-Native Email Triage Framework", summary: "Building a knowledge-graph-backed Gmail pipeline with OAuth 2.0, spaCy, NetworkX, LangChain, and SQLite.", tags: ["OAuth 2.0", "spaCy", "NetworkX", "LangChain", "SQLite"] },
+    { year: "Nov 2025 - Feb 2026", title: "Data analyst", organization: "Context-Aware Recommendation Engine", summary: "Designed NLP intent extraction and retrieval-style ranking over contextual location signals.", tags: ["NLP", "Intent extraction", "Retrieval ranking", "Python"] },
+    { year: "Apr 2025 - Aug 2025", title: "Blockchain developer", organization: "Blockchain Based Marketplace", summary: "Built a decentralized NFT marketplace with Solidity, Ethereum PoS, IPFS, and React.", tags: ["Solidity", "Ethereum PoS", "IPFS", "React"] },
+    { year: "Mar 2025 - May 2025", title: "Data analyst", organization: "Smart Data Compression Algorithm", summary: "Developed adaptive compression with up to 55% size reduction and verified lossless recovery.", tags: ["Python", "Adaptive compression", "Lossless recovery"] },
   ],
   contactLinks: [
     { label: "Email Karan", href: "mailto:karankhatri2924@gmail.com", icon: "email" },
