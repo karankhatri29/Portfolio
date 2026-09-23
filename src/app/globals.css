@@ -25,6 +25,12 @@ body { background: rgb(var(--color-paper)); color: rgb(var(--color-ink)); }
   .timeline-item[data-reveal="hidden"] { opacity: 1; transform: none; }
 }
 
+@keyframes term-type { from { width: 0; } }
+@keyframes term-blink { 50% { opacity: 0; } }
+.term-line { display: block; max-width: 100%; overflow: hidden; white-space: nowrap; width: calc(var(--n) * 1ch); animation: term-type calc(var(--n) * 32ms) steps(var(--n)) var(--delay) backwards; }
+.term-cursor { animation: term-blink 1s steps(2, start) infinite; }
+@media (prefers-reduced-motion: reduce) { .term-line, .term-cursor { animation: none; } }
+
 @keyframes graph-node-in { from { opacity: 0; } }
 .graph-node { animation: graph-node-in 0.6s ease backwards; }
 @media (prefers-reduced-motion: reduce) { .graph-node { animation: none; } }

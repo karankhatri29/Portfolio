@@ -17,6 +17,8 @@ export type AboutContent = {
   leadership: string[];
 };
 
+export type TerminalLine = { command: string; output: string };
+
 export type PortfolioContent = {
   name: string;
   eyebrow: string;
@@ -26,6 +28,8 @@ export type PortfolioContent = {
   timeline: TimelineItem[];
   contactLinks: ContactLink[];
   about: AboutContent;
+  /** Short lines typed out in the hero terminal card; keep each under ~30 characters. */
+  terminal: TerminalLine[];
 };
 
 export const portfolioContent: PortfolioContent = {
@@ -45,6 +49,11 @@ export const portfolioContent: PortfolioContent = {
     { label: "Karan on GitHub", href: "https://github.com/karankhatri29", icon: "github" },
     { label: "Karan on LinkedIn", href: "https://www.linkedin.com/in/karan-khatri-46729a277", icon: "linkedin" },
     { label: "Call Karan", href: "tel:+917995646526", icon: "phone" },
+  ],
+  terminal: [
+    { command: "whoami", output: "Karan Kaushik Khatri" },
+    { command: "cat focus.txt", output: "backend · data · applied AI" },
+    { command: "now", output: "Gmail knowledge-graph pipeline" },
   ],
   about: {
     introduction: "I am Karan Kaushik Khatri, an Integrated M.Tech Computer Science Engineering student at VIT Vellore with a 9.42 CGPA.",
