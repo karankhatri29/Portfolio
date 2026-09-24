@@ -14,6 +14,7 @@ jest.mock("@/lib/content/blog", () => ({
     { slug: "popular-post", title: "Popular Post", date: "2026-02-01", summary: "" },
   ],
 }));
+jest.mock("@/components/analytics/AutoRefresh", () => ({ AutoRefresh: () => <p>auto refresh</p> }));
 jest.mock("@/components/analytics/MessageInbox", () => ({ MessageInbox: ({ initialMessages }: { initialMessages: unknown[] }) => <div>inbox with {initialMessages.length} messages</div> }));
 
 const mockAuth = auth as unknown as jest.Mock;

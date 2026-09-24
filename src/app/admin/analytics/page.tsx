@@ -3,6 +3,7 @@ import Link from "next/link";
 import { auth } from "@/auth";
 import { AdminGate } from "@/components/AdminGate";
 import { ActivityFeed } from "@/components/analytics/ActivityFeed";
+import { AutoRefresh } from "@/components/analytics/AutoRefresh";
 import { BarList } from "@/components/analytics/BarList";
 import { FunnelChart } from "@/components/analytics/FunnelChart";
 import { MessageInbox } from "@/components/analytics/MessageInbox";
@@ -72,6 +73,8 @@ function Dashboard({ data, posts: blogPosts, days, now }: { data: NonNullable<Aw
           <Link href="/admin" className="text-accent underline underline-offset-4">Edit content</Link>
         </div>
       </div>
+
+      <AutoRefresh />
 
       <section aria-label="Summary" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Page views" value={summary.views} previous={summary.previous.views} days={days} />
