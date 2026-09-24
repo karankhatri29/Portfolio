@@ -164,6 +164,33 @@ describe("askGemini", () => {
     expect(JSON.stringify((console.error as jest.Mock).mock.calls)).not.toContain("test-key");
   });
 
+  it("cleans a key pasted with a newline, spaces or wrapping quotes before using it in the header", async () => {
+    for (const messy of ["test-key\n", "  test-key  ", '"test-key"', "'test-key'\r\n"]) {
+      const fetchImpl = ok(reply("Fine."));
+      await askGemini({ ...base, apiKey: messy, fetchImpl });
+      expect(fetchImpl.mock.calls[0][1].headers["x-goog-api-key"]).toBe("test-key");
+    }
+  });
+
+  it("treats a key that is only whitespace or quotes as not configured", async () => {
+    const fetchImpl = ok(reply("x"));
+
+    expect(await askGemini({ ...base, apiKey: ' "" \n', fetchImpl })).toEqual({ ok: false, reason: "not-configured" });
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("logs the error type, network code and a redacted message so a live failure can be diagnosed", async () => {
+    const failing = jest.fn().mockRejectedValue(Object.assign(new TypeError("fetch failed for key test-key"), { cause: { code: "ENOTFOUND" } }));
+
+    expect(await askGemini({ ...base, fetchImpl: failing })).toEqual({ ok: false, reason: "unavailable" });
+
+    const logged = JSON.stringify((console.error as jest.Mock).mock.calls);
+    expect(logged).toContain("TypeError");
+    expect(logged).toContain("ENOTFOUND");
+    expect(logged).toContain("fetch failed for key [redacted]");
+    expect(logged).not.toContain("test-key");
+  });
+
   it("cleans the model's formatting before returning it", async () => {
     const result = await askGemini({ ...base, fetchImpl: ok(reply("**He** built it.")) });
     expect(result).toEqual({ ok: true, text: "He built it." });
