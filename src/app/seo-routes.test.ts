@@ -44,6 +44,7 @@ describe("sitemap", () => {
 
     expect(hello?.lastModified).toEqual(new Date("2026-09-01"));
     expect(odd?.lastModified).toBeUndefined();
+    expect(entries.find((entry) => entry.url === "https://karan.dev")?.lastModified).toBeUndefined();
     expect(entries.some((entry) => entry.url.includes("/projects/"))).toBe(false);
   });
 });

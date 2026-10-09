@@ -1,7 +1,8 @@
 import { auth } from "@/auth";
-import { recordEvent } from "@/lib/analytics/repository";
+import { countRecentEvents, recordEvent } from "@/lib/analytics/repository";
 import { CONTACT_TARGETS, browserName, clampInt, deviceType, isBot, isSameOrigin, normalizePath, normalizeRefTag, referrerHost, visitorHash } from "@/lib/analytics/tracking";
 
+const MAX_EVENTS_PER_MINUTE = 60;
 const skipped = () => new Response(null, { status: 204 });
 
 function clientIp(request: Request) {
@@ -42,6 +43,10 @@ export async function POST(request: Request) {
       city = "";
     }
 
+    const hash = visitorHash(clientIp(request), userAgent, process.env.AUTH_SECRET ?? "dev-salt");
+    // A script faking the same-origin header must not be able to fill the table.
+    if ((await countRecentEvents(hash, 1)) >= MAX_EVENTS_PER_MINUTE) return skipped();
+
     await recordEvent({
       type,
       path,
@@ -55,7 +60,7 @@ export async function POST(request: Request) {
       browser: browserName(userAgent),
       durationSeconds,
       scrollPercent,
-      visitorHash: visitorHash(clientIp(request), userAgent, process.env.AUTH_SECRET ?? "dev-salt"),
+      visitorHash: hash,
       target: type === "click" ? target : "",
     });
   } catch (error) {

@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+
 import { auth } from "@/auth";
 import { AboutSection } from "@/components/AboutSection";
 import { CareerTimeline } from "@/components/CareerTimeline";
@@ -16,8 +18,14 @@ import { listBlogPosts } from "@/lib/content/blog";
 import { listHighlights, listProjects, listSkills } from "@/lib/content/repository";
 import { portfolioContent } from "@/data/portfolio";
 import { getGithubActivity, githubUsername } from "@/lib/github";
-import { absoluteUrl, siteUrl, socialProfiles } from "@/lib/site";
+import { websiteSchema } from "@/lib/seo";
+import { SITE_NAME, absoluteUrl, siteUrl, socialProfiles } from "@/lib/site";
 import { buildSkillGraph } from "@/lib/skills/graph";
+
+export const metadata: Metadata = {
+  alternates: { canonical: "/", types: { "application/rss+xml": "/feed.xml" } },
+  openGraph: { type: "profile", url: "/", siteName: SITE_NAME, locale: "en_US" },
+};
 
 export default async function Page() {
   const githubUser = githubUsername(portfolioContent.contactLinks);
@@ -46,6 +54,8 @@ export default async function Page() {
         data={{
           "@context": "https://schema.org",
           "@type": "Person",
+          "@id": `${siteUrl()}/#person`,
+          mainEntityOfPage: siteUrl(),
           name: portfolioContent.name,
           jobTitle: portfolioContent.headline.split(".")[0],
           description: portfolioContent.summary,
@@ -55,6 +65,7 @@ export default async function Page() {
           alumniOf: { "@type": "CollegeOrUniversity", name: "Vellore Institute of Technology" },
         }}
       />
+      <JsonLd data={websiteSchema()} />
       <div className="mx-auto max-w-6xl px-5 lg:px-8"><HeroSection content={portfolioContent} projects={projects} skills={skills} bookingUrl={process.env.NEXT_PUBLIC_BOOKING_URL || undefined} /></div>
       <div className="mx-auto max-w-7xl px-5 lg:px-10"><CareerTimeline items={portfolioContent.timeline} /></div>
       {skillGraph.edges.length ? (

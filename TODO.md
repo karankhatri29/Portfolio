@@ -96,10 +96,52 @@ The blog editor and the project screenshot field have an "Upload image" button. 
 2. Vercel adds `BLOB_READ_WRITE_TOKEN` automatically. For local testing run `vercel env pull .env.local` (back up `.env.local` first).
 Until then the button shows "Image uploads are not set up yet". You can always paste an image link instead.
 
-### [ ] 18. Tell search engines and check link previews
-1. Google Search Console > add your site > Sitemaps > submit `https://YOUR-DOMAIN/sitemap.xml`.
-2. Paste your home page and a blog post into LinkedIn's Post Inspector (linkedin.com/post-inspector) and the X card validator to confirm the preview image and text look right.
-3. The RSS feed is at `/feed.xml` and is linked in the footer and blog page.
+### [ ] 18. Google Search Console launch checklist (chronological)
+Who: **Claude** = already done in code, **You** = needs your accounts, **Both** = tell Claude what you see and it fixes it.
+Based on Google's docs (SEO starter guide, sitemaps, URL Inspection, structured data, Core Web Vitals, JavaScript SEO).
+
+**Done in code (Claude)**
+- [x] Title template, descriptions, canonicals on every public page (home now included), Open Graph and Twitter tags, RSS link
+- [x] `robots.txt` (blocks `/admin` and `/api/`, links the sitemap), `sitemap.xml` (absolute URLs, no ignored `priority`/`changefreq`, `lastmod` only for posts that have a real date)
+- [x] Drafts and the 404 page are `noindex`; Vercel also adds `noindex` to preview deployments
+- [x] JSON-LD: `Person`, `WebSite`, `Blog`, `BlogPosting`, project `SoftwareSourceCode`/`CreativeWork`, `BreadcrumbList`
+- [x] Dynamic OG images for home, posts and projects
+- [x] Optional `GOOGLE_SITE_VERIFICATION` env var renders the Search Console HTML-tag verification (skip it if you verify by DNS)
+
+**Step 1 - Domain and environment (You, Vercel)**
+- [ ] Live address is `https://portfolio-karankaushikkhatri.vercel.app` (no custom domain yet, which is fine for Search Console; a custom domain later is better for a recruiter-friendly URL). If you add one later, pick ONE main host and redirect the other to it.
+- [ ] Vercel > Settings > Environment Variables (Production): `NEXT_PUBLIC_SITE_URL=https://YOUR-DOMAIN` (exact main host, https, no trailing slash). Redeploy. (Without it, Vercel's production-domain variable is used, but set it explicitly so it can never be wrong.)
+
+**Step 2 - Verify the deployed site (You, then tell Claude anything odd)**
+- [ ] Open `https://YOUR-DOMAIN/robots.txt`: shows `Allow: /`, the disallows, and `Sitemap: https://YOUR-DOMAIN/sitemap.xml`
+- [ ] Open `/sitemap.xml`: every URL starts with your real domain (not `localhost` or `*.vercel.app`) and lists home, blog, resume, projects, posts
+- [ ] Open `/feed.xml`, `/blog`, a project and a post. In "View page source" confirm `<title>`, `<link rel="canonical">`, `og:` tags and `application/ld+json` are present and use your domain
+- [ ] Confirm the old `*.vercel.app` address and the non-main host redirect (or at least canonical) to the main domain
+- [ ] Confirm no public page has `noindex` (View source: search for `noindex`; only drafts and the 404 should have it)
+
+**Step 3 - Add the property in Search Console (You)**
+- [ ] search.google.com/search-console > Add property > **URL prefix** > `https://portfolio-karankaushikkhatri.vercel.app` (the Domain type needs DNS access, which a *.vercel.app address does not give you; use it only if you later add a custom domain). Verify with the HTML tag: copy the `content` value Google shows into `GOOGLE_SITE_VERIFICATION` on Vercel, redeploy, then click Verify
+- [ ] Sitemaps > submit `sitemap.xml`. Status should become "Success" and show the discovered page count (a sitemap is only a hint)
+- [ ] URL Inspection > paste the home page > **Request indexing**. Repeat for `/blog`, `/resume`, your best project and best post only. There is a quota and resubmitting does not speed anything up
+
+**Step 4 - Test like Google does (You, then tell Claude the results)**
+- [ ] URL Inspection > **Test live URL** > View tested page: confirm HTTP 200, "Page is indexable", the screenshot shows the full page, the rendered HTML contains the lower sections (the `defer-render` ones), and "Google-selected canonical" matches your domain
+- [ ] Rich Results Test (search.google.com/test/rich-results) on the home page, a post and a project: no errors on `Person`, `BlogPosting`, `BreadcrumbList`
+- [ ] PageSpeed Insights on the home page and a post (mobile): LCP 2.5 s or less, INP under 200 ms, CLS under 0.1. Send Claude anything red
+- [ ] LinkedIn Post Inspector and the X card validator on the home page and a post: image and text look right
+
+**Step 5 - Content that helps ranking (You)**
+- [ ] Publish at least a few real blog posts and fill in every project's summary, problem/approach/result and screenshots (thin pages rarely get indexed)
+- [ ] Link to your site from your GitHub profile, LinkedIn, resume PDF, and any publications. Google finds pages mainly through links from other sites
+- [ ] Optionally set the site URL as the website on your GitHub and LinkedIn profiles (matches the `sameAs` links in the `Person` schema)
+
+**Step 6 - Monitor for 2 to 4 weeks (You, check weekly; Both for fixes)**
+- [ ] Indexing > Pages: look for "Crawled - currently not indexed", "Duplicate without user-selected canonical", "Blocked by robots.txt", "Soft 404". Send Claude the affected URLs
+- [ ] Enhancements/Breadcrumbs: fix errors that appear
+- [ ] Manual actions and Security issues stay empty
+- [ ] Core Web Vitals report fills in after real-user data accumulates (weeks)
+- [ ] Performance: first impressions usually appear in 1 to 2 weeks; `site:YOUR-DOMAIN` on Google shows indexed pages
+- [ ] After adding new posts or projects they appear in the sitemap automatically; request indexing for the important ones
 
 ### [ ] 19. Set up an uptime check (free, 5 minutes)
 Create a free monitor at uptimerobot.com (or Better Stack) that requests `https://YOUR-DOMAIN/api/health` every 5 minutes and emails you if it fails. It reports "ok" only when the database also answers.

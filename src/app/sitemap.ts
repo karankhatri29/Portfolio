@@ -17,12 +17,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // The sitemap must still work if the database is briefly unreachable.
   const projects = await listProjects().catch(() => []);
 
+  // Google ignores priority and changefreq, and only trusts lastmod when it is verifiably accurate,
+  // so only posts (which have a real publish date) carry one.
   return [
-    { url: base, changeFrequency: "monthly", priority: 1 },
-    { url: `${base}/blog`, changeFrequency: "weekly", priority: 0.8 },
-    { url: `${base}/resume`, changeFrequency: "monthly", priority: 0.7 },
-    ...projects.map((project) => ({ url: `${base}/projects/${project.slug}`, changeFrequency: "monthly" as const, priority: 0.7 })),
-    ...posts.map((post) => ({ url: `${base}/blog/${post.slug}`, lastModified: parsedDate(post.date), changeFrequency: "yearly" as const, priority: 0.6 })),
-    { url: `${base}/privacy`, changeFrequency: "yearly", priority: 0.2 },
+    { url: base },
+    { url: `${base}/blog` },
+    { url: `${base}/resume` },
+    ...projects.map((project) => ({ url: `${base}/projects/${project.slug}` })),
+    ...posts.map((post) => ({ url: `${base}/blog/${post.slug}`, lastModified: parsedDate(post.date) })),
+    { url: `${base}/privacy` },
   ];
 }

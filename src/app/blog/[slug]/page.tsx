@@ -10,7 +10,8 @@ import { ShareLinks } from "@/components/ShareLinks";
 import { TableOfContents } from "@/components/TableOfContents";
 import { extractHeadings, formatPostDate, readingMinutes } from "@/lib/content/blog-utils";
 import { getBlogPost, listBlogPosts } from "@/lib/content/blog";
-import { SITE_NAME, absoluteUrl } from "@/lib/site";
+import { breadcrumbs, personRef, publisherRef } from "@/lib/seo";
+import { SITE_NAME, absoluteUrl, siteUrl } from "@/lib/site";
 
 async function loadPost(slug: string) {
   const session = await auth();
@@ -27,7 +28,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     description: post.summary,
     alternates: { canonical: `/blog/${post.slug}` },
     robots: post.status === "published" ? undefined : { index: false, follow: false },
-    openGraph: { type: "article", title: post.title, description: post.summary, publishedTime: post.date || undefined, authors: [SITE_NAME], tags: post.tags },
+    keywords: post.tags.length > 0 ? post.tags : undefined,
+    openGraph: { type: "article", url: `/blog/${post.slug}`, title: post.title, description: post.summary, publishedTime: post.date || undefined, modifiedTime: post.date || undefined, authors: [SITE_NAME], tags: post.tags },
+    twitter: { card: "summary_large_image", title: post.title, description: post.summary },
   };
 }
 
@@ -56,11 +59,18 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           description: post.summary,
           datePublished: post.date || undefined,
           keywords: post.tags.length > 0 ? post.tags.join(", ") : undefined,
+          dateModified: post.date || undefined,
           timeRequired: `PT${minutes}M`,
-          author: { "@type": "Person", name: SITE_NAME },
-          mainEntityOfPage: url,
+          wordCount: post.content.split(/\s+/).filter(Boolean).length,
+          image: absoluteUrl(`/blog/${post.slug}/opengraph-image`),
+          inLanguage: "en",
+          author: personRef(),
+          publisher: publisherRef(),
+          isPartOf: { "@id": `${siteUrl()}/#website` },
+          mainEntityOfPage: { "@type": "WebPage", "@id": url },
         }}
       />
+      {isDraft ? null : <JsonLd data={breadcrumbs([{ name: "Writing", path: "/blog" }, { name: post.title, path: `/blog/${post.slug}` }])} />}
       <Link href="/blog" className="text-sm font-semibold text-accent underline underline-offset-4">All writing</Link>
       {isDraft ? <p role="status" className="mt-6 border border-accent/50 bg-accent/10 p-3 text-sm font-semibold">Draft preview. Visitors cannot see this post until you publish it.</p> : null}
       <p className="mt-8 text-sm font-semibold uppercase tracking-[0.2em] text-accent">

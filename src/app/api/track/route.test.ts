@@ -2,12 +2,12 @@
  * @jest-environment node
  */
 import { auth } from "@/auth";
-import { recordEvent } from "@/lib/analytics/repository";
+import { countRecentEvents, recordEvent } from "@/lib/analytics/repository";
 
 import { POST } from "./route";
 
 jest.mock("@/auth", () => ({ auth: jest.fn() }));
-jest.mock("@/lib/analytics/repository", () => ({ recordEvent: jest.fn() }));
+jest.mock("@/lib/analytics/repository", () => ({ recordEvent: jest.fn(), countRecentEvents: jest.fn() }));
 
 const mockAuth = auth as unknown as jest.Mock;
 const mockRecord = jest.mocked(recordEvent);

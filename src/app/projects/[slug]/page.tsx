@@ -2,14 +2,24 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { JsonLd } from "@/components/JsonLd";
 import { getProject } from "@/lib/content/repository";
+import { breadcrumbs, personRef } from "@/lib/seo";
+import { absoluteUrl, siteUrl } from "@/lib/site";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const project = await getProject(slug);
   if (!project) return {};
 
-  return { title: project.title, description: project.summary, alternates: { canonical: `/projects/${project.slug}` } };
+  return {
+    title: project.title,
+    description: project.summary,
+    keywords: project.stack?.length ? project.stack : undefined,
+    alternates: { canonical: `/projects/${project.slug}` },
+    openGraph: { type: "article", url: `/projects/${project.slug}`, title: project.title, description: project.summary },
+    twitter: { card: "summary_large_image", title: project.title, description: project.summary },
+  };
 }
 
 const linkClass = "border border-ink/30 px-4 py-2 text-sm font-semibold transition hover:border-accent hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent";
@@ -29,6 +39,25 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
 
   return (
     <main className="mx-auto max-w-4xl px-5 py-20 lg:px-8 lg:py-32">
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": project.githubUrl ? "SoftwareSourceCode" : "CreativeWork",
+          name: project.title,
+          headline: project.title,
+          description: project.summary,
+          url: absoluteUrl(`/projects/${project.slug}`),
+          image: images[0]?.url ?? absoluteUrl(`/projects/${project.slug}/opengraph-image`),
+          dateCreated: project.year || undefined,
+          keywords: stack.length > 0 ? stack.join(", ") : undefined,
+          codeRepository: project.githubUrl || undefined,
+          author: personRef(),
+          creator: personRef(),
+          inLanguage: "en",
+          isPartOf: { "@id": `${siteUrl()}/#website` },
+        }}
+      />
+      <JsonLd data={breadcrumbs([{ name: "Projects", path: "/#projects" }, { name: project.title, path: `/projects/${project.slug}` }])} />
       <Link href="/#projects" className="text-sm font-semibold text-accent underline underline-offset-4">All projects</Link>
       <p className="mt-8 text-sm font-semibold uppercase tracking-[0.2em] text-accent">{project.year} / {project.role}</p>
       <h1 className="mt-5 font-display text-5xl font-semibold tracking-tight sm:text-7xl">{project.title}</h1>

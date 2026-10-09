@@ -19,6 +19,8 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image" },
   alternates: { types: { "application/rss+xml": "/feed.xml" } },
   robots: { index: true, follow: true },
+  // Optional: only rendered when GOOGLE_SITE_VERIFICATION is set (the DNS method needs no tag).
+  verification: process.env.GOOGLE_SITE_VERIFICATION ? { google: process.env.GOOGLE_SITE_VERIFICATION } : undefined,
 };
 
 

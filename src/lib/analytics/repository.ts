@@ -88,6 +88,12 @@ export async function recordEvent(event: EventInput): Promise<void> {
   `;
 }
 
+export async function countRecentEvents(visitorHash: string, minutes: number): Promise<number> {
+  const sql = sqlClient();
+  const rows = (await sql`SELECT COUNT(*)::int AS count FROM events WHERE visitor_hash = ${visitorHash} AND created_at >= now() - make_interval(mins => ${minutes}::int)`) as { count: number }[];
+  return rows[0]?.count ?? 0;
+}
+
 export async function createMessage(input: { name: string; email: string; message: string; senderHash: string }): Promise<string> {
   const sql = sqlClient();
   const id = crypto.randomUUID();

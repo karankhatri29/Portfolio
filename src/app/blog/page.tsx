@@ -1,13 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { JsonLd } from "@/components/JsonLd";
 import { formatPostDate } from "@/lib/content/blog-utils";
+import { breadcrumbs, personRef } from "@/lib/seo";
+import { absoluteUrl } from "@/lib/site";
 import { listBlogPosts } from "@/lib/content/blog";
 
 export const metadata: Metadata = {
   title: "Writing and research",
   description: "Notes on applied AI, NLP, knowledge graphs and building useful systems.",
-  alternates: { canonical: "/blog" },
+  alternates: { canonical: "/blog", types: { "application/rss+xml": "/feed.xml" } },
+  openGraph: { type: "website", url: "/blog", title: "Writing and research", description: "Notes on applied AI, NLP, knowledge graphs and building useful systems." },
 };
 
 export default async function BlogIndexPage({ searchParams }: { searchParams: Promise<{ tag?: string }> }) {
@@ -18,6 +22,17 @@ export default async function BlogIndexPage({ searchParams }: { searchParams: Pr
 
   return (
     <main className="mx-auto max-w-4xl px-5 py-16 lg:px-8 lg:py-28">
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "Blog",
+          name: "Writing and research",
+          url: absoluteUrl("/blog"),
+          author: personRef(),
+          blogPost: all.slice(0, 20).map((post) => ({ "@type": "BlogPosting", headline: post.title, url: absoluteUrl(`/blog/${post.slug}`), datePublished: post.date || undefined })),
+        }}
+      />
+      <JsonLd data={breadcrumbs([{ name: "Writing", path: "/blog" }])} />
       <Link href="/" className="text-sm font-semibold text-accent underline underline-offset-4">Home</Link>
       <p className="mt-8 text-sm font-semibold uppercase tracking-[0.2em] text-accent">Writing and research</p>
       <h1 className="mt-4 font-display text-5xl font-semibold tracking-tight sm:text-7xl">Writing and research</h1>
