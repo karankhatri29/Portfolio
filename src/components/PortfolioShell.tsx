@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import type { PortfolioSession } from "@/lib/auth/types";
 import { portfolioContent } from "@/data/portfolio";
+import { BrandMark } from "@/components/BrandMark";
 import { AuthControls } from "@/components/AuthControls";
 import { ContactFooter } from "@/components/ContactFooter";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -14,7 +15,7 @@ export function PortfolioShell({ children, session }: { children: React.ReactNod
       </a>
       <header className="border-b border-ink/10">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 py-3 sm:py-5 lg:px-8">
-          <Link href="/" className="font-display text-lg font-semibold tracking-tight sm:text-xl">{portfolioContent.name}</Link>
+          <Link href="/" className="flex items-center gap-3 font-display text-lg font-semibold tracking-tight sm:text-xl"><BrandMark size={60} /><span>{portfolioContent.name}</span></Link>
           <nav aria-label="Primary navigation" className="order-3 flex w-full gap-5 text-sm text-muted sm:order-2 sm:w-auto">
             {portfolioContent.navigation.map((item) => <a key={item} href={`#${item.toLowerCase()}`} className="hover:text-accent">{item}</a>)}
             <Link href="/resume" className="hover:text-accent">Resume</Link>

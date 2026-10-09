@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 
 import "./globals.css";
 import { Analytics } from "@/components/Analytics";
@@ -8,6 +8,8 @@ import { portfolioContent } from "@/data/portfolio";
 import { SITE_NAME, siteUrl } from "@/lib/site";
 
 const role = portfolioContent.headline.split(".")[0];
+
+export const viewport: Viewport = { themeColor: "#131918" };
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),

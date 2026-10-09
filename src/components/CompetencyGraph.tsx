@@ -108,7 +108,7 @@ function Overview({ skills, onSelect }: { skills: SkillRecord[]; onSelect: Selec
   return (
     <div>
       <h3 className="font-display text-2xl font-semibold">How to read this</h3>
-      <p className="mt-3 leading-7 text-muted">Each competency links to the tools I work with. Tools outlined in gold were used in a project, and link on to it as evidence; dashed ones are skills without a listed project yet. Select any node to see the detail.</p>
+      <p className="mt-3 leading-7 text-muted">Each competency links to the tools I work with. Tools outlined in the accent colour were used in a project, and link on to it as evidence; dashed ones are skills without a listed project yet. Select any node to see the detail.</p>
       <ul className="mt-6 space-y-3">
         {skills.map((skill) => (
           <li key={skill.id}>

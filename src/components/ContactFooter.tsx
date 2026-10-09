@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BrandMark } from "@/components/BrandMark";
 import type { CSSProperties } from "react";
 
 import { ContactForm } from "@/components/ContactForm";
@@ -68,7 +69,8 @@ export function ContactFooter({ links, name }: { links: ContactLink[]; name?: st
         <div className="mt-6"><ContactForm /></div>
       </div>
 
-      <p className="mt-16 text-center text-xs text-muted">© {new Date().getFullYear()} {name ?? ""} · <Link href="/privacy" className="underline underline-offset-4 hover:text-accent">Privacy</Link> · <a href="/feed.xml" className="underline underline-offset-4 hover:text-accent">RSS</a></p>
+      <div className="mt-16 flex justify-center"><BrandMark size={72} title={name ?? "Logo"} /></div>
+      <p className="mt-4 text-center text-xs text-muted">© {new Date().getFullYear()} {name ?? ""} · <Link href="/privacy" className="underline underline-offset-4 hover:text-accent">Privacy</Link> · <a href="/feed.xml" className="underline underline-offset-4 hover:text-accent">RSS</a></p>
     </footer>
   );
 }
