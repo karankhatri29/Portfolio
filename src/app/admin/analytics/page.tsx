@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { auth } from "@/auth";
@@ -27,6 +28,8 @@ function readDays(value: string | undefined) {
 function pageLabel(path: string) {
   return path === "/" ? "Home" : path;
 }
+
+export const metadata: Metadata = { title: "Analytics", robots: { index: false, follow: false } };
 
 export default async function AnalyticsPage({ searchParams }: { searchParams: Promise<{ days?: string }> }) {
   const session = await auth();

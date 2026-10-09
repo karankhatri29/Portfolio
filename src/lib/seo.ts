@@ -34,3 +34,10 @@ export function websiteSchema(): Record<string, unknown> {
     publisher: { "@id": `${siteUrl()}/#person` },
   };
 }
+
+/** Search snippets cut off near 160 characters, so trim on a word boundary with an ellipsis. */
+export function snippet(text: string, max = 160): string {
+  const clean = text.replace(/\s+/g, " ").trim();
+  if (clean.length <= max) return clean;
+  return clean.slice(0, max - 1).replace(/\s+\S*$/, "") + "…";
+}

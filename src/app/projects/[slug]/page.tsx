@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 
 import { JsonLd } from "@/components/JsonLd";
 import { getProject } from "@/lib/content/repository";
-import { breadcrumbs, personRef } from "@/lib/seo";
+import { breadcrumbs, personRef, snippet } from "@/lib/seo";
 import { absoluteUrl, siteUrl } from "@/lib/site";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   return {
     title: project.title,
-    description: project.summary,
+    description: snippet(project.summary),
     keywords: project.stack?.length ? project.stack : undefined,
     alternates: { canonical: `/projects/${project.slug}` },
     openGraph: { type: "article", url: `/projects/${project.slug}`, title: project.title, description: project.summary },

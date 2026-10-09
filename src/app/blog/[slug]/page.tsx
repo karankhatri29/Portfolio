@@ -6,11 +6,12 @@ import { auth } from "@/auth";
 import { JsonLd } from "@/components/JsonLd";
 import { MarkdownContent } from "@/components/MarkdownContent";
 import { PostNav } from "@/components/PostNav";
+import { RelatedPosts, relatedPosts } from "@/components/RelatedPosts";
 import { ShareLinks } from "@/components/ShareLinks";
 import { TableOfContents } from "@/components/TableOfContents";
 import { extractHeadings, formatPostDate, readingMinutes } from "@/lib/content/blog-utils";
 import { getBlogPost, listBlogPosts } from "@/lib/content/blog";
-import { breadcrumbs, personRef, publisherRef } from "@/lib/seo";
+import { breadcrumbs, personRef, publisherRef, snippet } from "@/lib/seo";
 import { SITE_NAME, absoluteUrl, siteUrl } from "@/lib/site";
 
 async function loadPost(slug: string) {
@@ -25,7 +26,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   return {
     title: post.title,
-    description: post.summary,
+    description: snippet(post.summary),
     alternates: { canonical: `/blog/${post.slug}` },
     robots: post.status === "published" ? undefined : { index: false, follow: false },
     keywords: post.tags.length > 0 ? post.tags : undefined,
@@ -91,6 +92,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         <MarkdownContent>{post.content}</MarkdownContent>
       </article>
       <div className="mt-12 border-t border-ink/10 pt-8"><ShareLinks url={url} title={post.title} /></div>
+      <RelatedPosts posts={relatedPosts(post, published)} />
       <PostNav newer={newer} older={older} />
     </main>
   );

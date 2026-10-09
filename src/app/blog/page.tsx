@@ -8,10 +8,10 @@ import { absoluteUrl } from "@/lib/site";
 import { listBlogPosts } from "@/lib/content/blog";
 
 export const metadata: Metadata = {
-  title: "Writing and research",
-  description: "Notes on applied AI, NLP, knowledge graphs and building useful systems.",
+  title: "Tech Blog: AI, NLP and Software Engineering",
+  description: "Practical write-ups on applied AI, NLP, knowledge graphs, web engineering and building useful systems, by Karan Kaushik Khatri.",
   alternates: { canonical: "/blog", types: { "application/rss+xml": "/feed.xml" } },
-  openGraph: { type: "website", url: "/blog", title: "Writing and research", description: "Notes on applied AI, NLP, knowledge graphs and building useful systems." },
+  openGraph: { type: "website", url: "/blog", title: "Tech Blog: AI, NLP and Software Engineering", description: "Practical write-ups on applied AI, NLP, knowledge graphs, web engineering and building useful systems." },
 };
 
 export default async function BlogIndexPage({ searchParams }: { searchParams: Promise<{ tag?: string }> }) {

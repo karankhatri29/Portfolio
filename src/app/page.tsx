@@ -23,6 +23,7 @@ import { SITE_NAME, absoluteUrl, siteUrl, socialProfiles } from "@/lib/site";
 import { buildSkillGraph } from "@/lib/skills/graph";
 
 export const metadata: Metadata = {
+  title: { absolute: `${SITE_NAME} | AI Engineer: NLP, Knowledge Graphs & Applied AI` },
   alternates: { canonical: "/", types: { "application/rss+xml": "/feed.xml" } },
   openGraph: { type: "profile", url: "/", siteName: SITE_NAME, locale: "en_US" },
 };

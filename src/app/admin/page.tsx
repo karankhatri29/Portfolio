@@ -1,9 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { auth } from "@/auth";
 import { AdminGate } from "@/components/AdminGate";
 import { ContentEditor } from "@/components/ContentEditor";
 import { listHighlights, listProjects, listSkills } from "@/lib/content/repository";
+
+export const metadata: Metadata = { title: "Admin", robots: { index: false, follow: false } };
 
 export default async function AdminPage() {
   const session = await auth();

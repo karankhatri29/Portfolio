@@ -1,9 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { auth } from "@/auth";
 import { AdminGate } from "@/components/AdminGate";
 import { BlogEditor } from "@/components/BlogEditor";
 import { listPostsForAdmin } from "@/lib/content/blog";
+
+export const metadata: Metadata = { title: "Write blog posts", robots: { index: false, follow: false } };
 
 export default async function AdminBlogPage() {
   const session = await auth();
