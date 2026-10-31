@@ -8,6 +8,7 @@ import { ImageUploadButton } from "@/components/ImageUploadButton";
 import { MarkdownContent } from "@/components/MarkdownContent";
 import { formatPostDate, readingMinutes } from "@/lib/content/blog-utils";
 import type { BlogPost, PostStatus } from "@/lib/content/blog";
+import { IconButton, dangerButton } from "@/components/IconButton";
 
 type Status =
   | { kind: "idle" }
@@ -105,10 +106,10 @@ export function BlogEditor({ initialPosts }: { initialPosts: BlogPost[] }) {
                 </span>
                 <span className="flex gap-4">
                   <Link href={`/blog/${post.slug}`} className={linkButton}>{post.status === "published" ? "View" : "Preview"} <span className="sr-only">{post.title}</span></Link>
-                  <button type="button" className={linkButton} onClick={() => startEdit(post)}>Edit {post.title}</button>
+                  <IconButton kind="edit" label={`Edit ${post.title}`} onClick={() => startEdit(post)} />
                   {confirmingSlug === post.slug
-                    ? <button type="button" className={linkButton} onClick={() => remove(post.slug)}>Confirm delete {post.title}</button>
-                    : <button type="button" className={linkButton} onClick={() => setConfirmingSlug(post.slug)}>Delete {post.title}</button>}
+                    ? <button type="button" className={dangerButton} onClick={() => remove(post.slug)}>Confirm delete {post.title}</button>
+                    : <IconButton kind="delete" label={`Delete ${post.title}`} onClick={() => setConfirmingSlug(post.slug)} />}
                 </span>
               </li>
             ))}

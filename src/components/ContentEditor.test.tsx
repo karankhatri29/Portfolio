@@ -97,7 +97,10 @@ describe("project editing", () => {
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("title is required");
     expect(alert).toHaveTextContent("outcomes must be a non-empty list");
-    expect(screen.getAllByText(/Existing Project/)).toHaveLength(3);
+    // The list is unchanged: the project is still there with its edit and delete icon buttons.
+    expect(screen.getAllByText("Existing Project")).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "Edit Existing Project" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Delete Existing Project" })).toBeInTheDocument();
   });
 
   it("shows a server error without leaking details", async () => {

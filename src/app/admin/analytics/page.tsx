@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { auth } from "@/auth";
 import { AdminGate } from "@/components/AdminGate";
+import { AdminShell } from "@/components/AdminShell";
 import { ActivityFeed } from "@/components/analytics/ActivityFeed";
 import { AutoRefresh } from "@/components/analytics/AutoRefresh";
 import { BarList } from "@/components/analytics/BarList";
@@ -38,13 +39,9 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
   const [data, posts] = isAdmin ? await Promise.all([getDashboardData(days), listBlogPosts().catch(() => [])]) : [null, []];
 
   return (
-    <main className="mx-auto max-w-5xl px-5 py-20 lg:px-8 lg:py-28">
-      <p className="text-sm font-semibold uppercase tracking-[0.2em] text-accent">Admin</p>
-      <h1 className="mt-4 font-display text-5xl font-semibold tracking-tight sm:text-6xl">Analytics</h1>
-      <div className="mt-14">
-        <AdminGate session={session}>{data ? <Dashboard data={data} posts={posts} days={days} now={new Date()} /> : null}</AdminGate>
-      </div>
-    </main>
+    <AdminShell current="analytics" title="Analytics" description="Who visits, where they come from, and what they do." signedIn={isAdmin} wide>
+      <AdminGate session={session}>{data ? <Dashboard data={data} posts={posts} days={days} now={new Date()} /> : null}</AdminGate>
+    </AdminShell>
   );
 }
 

@@ -231,3 +231,43 @@ describe("HeroSection structure", () => {
     expect(new Set(delays).size).toBe(delays.length);
   });
 });
+
+describe("HeroSection terminal answers", () => {
+  const openAndRun = (command: string) => {
+    render(<HeroSection content={portfolioContent} />);
+    fireEvent.click(screen.getByRole("button", { name: /open the interactive terminal/i }));
+    const box = screen.getByRole("textbox", { name: /type a command or ask a question/i });
+    fireEvent.change(box, { target: { value: command } });
+    fireEvent.submit(box.closest("form")!);
+    return within(screen.getByRole("log", { name: "Terminal output" }));
+  };
+
+  it("whoami says who Karan is rather than repeating the hero", () => {
+    const output = openAndRun("whoami");
+
+    expect(output.getByText(portfolioContent.about.introduction)).toBeInTheDocument();
+    expect(output.getByText(/^Now: /)).toBeInTheDocument();
+    expect(output.getByText(`Availability: ${portfolioContent.availability!.label}`)).toBeInTheDocument();
+  });
+
+  it("projects says what each project is, from the page's own data", () => {
+    const output = openAndRun("projects");
+
+    const first = portfolioContent.timeline[0];
+    expect(output.getByText(new RegExp(first.summary.slice(0, 30)))).toBeInTheDocument();
+  });
+});
+
+describe("HeroSection terminal with no projects loaded", () => {
+  it("falls back to the timeline when the project list is empty, so projects still has something real to say", () => {
+    render(<HeroSection content={portfolioContent} projects={[]} />);
+    fireEvent.click(screen.getByRole("button", { name: /open the interactive terminal/i }));
+    const box = screen.getByRole("textbox", { name: /type a command or ask a question/i });
+    fireEvent.change(box, { target: { value: "projects" } });
+    fireEvent.submit(box.closest("form")!);
+
+    const output = within(screen.getByRole("log", { name: "Terminal output" }));
+    expect(output.queryByText("No projects listed yet.")).not.toBeInTheDocument();
+    expect(output.getByText(new RegExp(portfolioContent.timeline[0].organization.slice(0, 20)))).toBeInTheDocument();
+  });
+});

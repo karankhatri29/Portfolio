@@ -34,10 +34,12 @@ function terminalContext(content: PortfolioContent, projects?: Project[], skills
   return {
     name: content.name,
     focus: content.terminal,
-    skills: (skills ?? []).map((skill) => ({ name: skill.name, tools: skill.tools ?? [] })),
-    projects: projects
-      ? projects.map((project) => ({ title: project.title, year: project.year, href: `/projects/${project.slug}` }))
-      : content.timeline.map((item) => ({ title: item.organization, year: item.year })),
+    about: { introduction: content.about.introduction, detail: content.about.detail },
+    availability: content.availability?.open ? content.availability.label : undefined,
+    skills: (skills ?? []).map((skill) => ({ name: skill.name, tools: skill.tools ?? [], description: skill.description })),
+    projects: projects?.length
+      ? projects.map((project) => ({ title: project.title, year: project.year, href: `/projects/${project.slug}`, role: project.role, summary: project.summary }))
+      : content.timeline.map((item) => ({ title: item.organization, year: item.year, role: item.title, summary: item.summary })),
     contacts: content.contactLinks
       .map((link) => ({ label: contactLabel[link.icon] ?? link.label, text: link.href.replace(/^mailto:/, "").replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, ""), href: link.href })),
   };
