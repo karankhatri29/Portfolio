@@ -55,6 +55,13 @@ body::before {
 .graph-node { animation: graph-node-in 0.6s ease backwards; }
 @media (prefers-reduced-motion: reduce) { .graph-node { animation: none; } }
 
+/* Skills graph: stars twinkle slowly, and a pulse of light travels along the connections of the selected node. */
+@keyframes graph-twinkle { 50% { opacity: 0.5; } }
+.graph-twinkle { animation: graph-twinkle 3.6s ease-in-out infinite; }
+@keyframes graph-flow { to { stroke-dashoffset: -28; } }
+.graph-flow { stroke-dasharray: 2 12; animation: graph-flow 1s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .graph-twinkle { animation: none; } .graph-flow { animation: none; stroke-dasharray: none; opacity: 0.7; } }
+
 @media print {
   @page { margin: 14mm; }
   body { background: #fff !important; color: #000 !important; }
