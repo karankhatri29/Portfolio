@@ -1,5 +1,5 @@
 import { auth } from "@/auth";
-import { countRecentEvents, recordEvent } from "@/lib/analytics/repository";
+import { recordEvent } from "@/lib/analytics/repository";
 import { CONTACT_TARGETS, browserName, clampInt, deviceType, isBot, isSameOrigin, normalizePath, normalizeRefTag, referrerHost, visitorHash } from "@/lib/analytics/tracking";
 
 const MAX_EVENTS_PER_MINUTE = 60;
@@ -44,9 +44,7 @@ export async function POST(request: Request) {
     }
 
     const hash = visitorHash(clientIp(request), userAgent, process.env.AUTH_SECRET ?? "dev-salt");
-    // A script faking the same-origin header must not be able to fill the table.
-    if ((await countRecentEvents(hash, 1)) >= MAX_EVENTS_PER_MINUTE) return skipped();
-
+    // A script faking the same-origin header must not be able to fill the table, so recordEvent enforces the per-minute cap itself.
     await recordEvent({
       type,
       path,
@@ -62,7 +60,7 @@ export async function POST(request: Request) {
       scrollPercent,
       visitorHash: hash,
       target: type === "click" ? target : "",
-    });
+    }, MAX_EVENTS_PER_MINUTE);
   } catch (error) {
     console.error("track route failed", error);
   }

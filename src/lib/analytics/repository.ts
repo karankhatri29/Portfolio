@@ -1,4 +1,4 @@
-import { neon } from "@neondatabase/serverless";
+import { sqlClient } from "@/lib/db";
 
 export type EventInput = {
   type: "pageview" | "click" | "engagement";
@@ -74,24 +74,19 @@ export type DashboardData = {
   errors: ErrorSummary;
 };
 
-function sqlClient() {
-  const connectionString = process.env.DATABASE_URL;
-  if (!connectionString) throw new Error("DATABASE_URL is not configured");
-  return neon(connectionString);
-}
-
-export async function recordEvent(event: EventInput): Promise<void> {
+/**
+ * Stores an event unless this visitor already sent `maxPerMinute` in the last minute. The check and the insert are one
+ * statement, so a tracked event costs a single round trip to the database. Returns whether the event was stored.
+ */
+export async function recordEvent(event: EventInput, maxPerMinute: number): Promise<boolean> {
   const sql = sqlClient();
-  await sql`
+  const rows = (await sql`
     INSERT INTO events (type, path, referrer, ref_tag, is_entry, is_returning, country, city, device, browser, duration_s, scroll_pct, visitor_hash, target)
-    VALUES (${event.type}, ${event.path}, ${event.referrer}, ${event.refTag}, ${event.isEntry}, ${event.isReturning}, ${event.country}, ${event.city}, ${event.device}, ${event.browser}, ${event.durationSeconds}, ${event.scrollPercent}, ${event.visitorHash}, ${event.target})
-  `;
-}
-
-export async function countRecentEvents(visitorHash: string, minutes: number): Promise<number> {
-  const sql = sqlClient();
-  const rows = (await sql`SELECT COUNT(*)::int AS count FROM events WHERE visitor_hash = ${visitorHash} AND created_at >= now() - make_interval(mins => ${minutes}::int)`) as { count: number }[];
-  return rows[0]?.count ?? 0;
+    SELECT ${event.type}, ${event.path}, ${event.referrer}, ${event.refTag}, ${event.isEntry}, ${event.isReturning}, ${event.country}, ${event.city}, ${event.device}, ${event.browser}, ${event.durationSeconds}, ${event.scrollPercent}, ${event.visitorHash}, ${event.target}
+    WHERE (SELECT COUNT(*) FROM events WHERE visitor_hash = ${event.visitorHash} AND created_at >= now() - interval '1 minute') < ${maxPerMinute}::int
+    RETURNING id
+  `) as { id: string }[];
+  return rows.length > 0;
 }
 
 export async function createMessage(input: { name: string; email: string; message: string; senderHash: string }): Promise<string> {
@@ -388,6 +383,15 @@ export async function recordError(report: { source: string; message: string; sta
     INSERT INTO error_logs (source, message, stack, path, digest)
     VALUES (${report.source}, ${report.message}, ${report.stack}, ${report.path}, ${report.digest})
   `;
+}
+
+const ERROR_RETENTION_DAYS = 90;
+
+/** Deletes analytics older than the retention window so the free-tier database does not fill up. */
+export async function pruneOldAnalytics(eventDays: number): Promise<void> {
+  const sql = sqlClient();
+  await sql`DELETE FROM events WHERE created_at < now() - make_interval(days => ${eventDays}::int)`;
+  await sql`DELETE FROM error_logs WHERE created_at < now() - make_interval(days => ${ERROR_RETENTION_DAYS}::int)`;
 }
 
 export async function countRecentErrors(minutes: number): Promise<number> {

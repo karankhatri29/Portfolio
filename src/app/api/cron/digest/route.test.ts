@@ -1,16 +1,17 @@
 /**
  * @jest-environment node
  */
-import { getDashboardData } from "@/lib/analytics/repository";
+import { getDashboardData, pruneOldAnalytics } from "@/lib/analytics/repository";
 import { emailConfig, sendEmail } from "@/lib/notify/email";
 
 import { GET } from "./route";
 
-jest.mock("@/lib/analytics/repository", () => ({ getDashboardData: jest.fn() }));
+jest.mock("@/lib/analytics/repository", () => ({ getDashboardData: jest.fn(), pruneOldAnalytics: jest.fn() }));
 jest.mock("@/lib/content/blog", () => ({ listBlogPosts: () => [{ slug: "a", title: "Post A" }] }));
 jest.mock("@/lib/notify/email", () => ({ emailConfig: jest.fn(), sendEmail: jest.fn() }));
 
 const mockData = jest.mocked(getDashboardData);
+const mockPrune = jest.mocked(pruneOldAnalytics);
 const mockConfig = jest.mocked(emailConfig);
 const mockSend = jest.mocked(sendEmail);
 const env = process.env as Record<string, string | undefined>;
@@ -22,6 +23,7 @@ beforeEach(() => {
   env.CRON_SECRET = "s3cret";
   mockConfig.mockReturnValue({ apiKey: "k", to: "me@example.com", from: "f" });
   mockSend.mockResolvedValue("sent");
+  mockPrune.mockResolvedValue(undefined);
   mockData.mockResolvedValue({
     days: 7,
     summary: { views: 10, visitors: 5, contactClicks: 1, messages: 0, unreadMessages: 0, previous: { views: 5, visitors: 5, contactClicks: 0, messages: 0 } },
@@ -57,6 +59,32 @@ describe("/api/cron/digest", () => {
 
     expect(await response.json()).toEqual({ sent: false, reason: "Email is not configured" });
     expect(mockSend).not.toHaveBeenCalled();
+  });
+
+  it("prunes old analytics even when email is not configured, keeping at least 190 days", async () => {
+    mockConfig.mockReturnValue(null);
+    await call("Bearer s3cret");
+    expect(mockPrune).toHaveBeenLastCalledWith(365);
+
+    env.ANALYTICS_RETENTION_DAYS = "30";
+    await call("Bearer s3cret");
+    expect(mockPrune).toHaveBeenLastCalledWith(190);
+
+    env.ANALYTICS_RETENTION_DAYS = "500";
+    await call("Bearer s3cret");
+    expect(mockPrune).toHaveBeenLastCalledWith(500);
+    delete env.ANALYTICS_RETENTION_DAYS;
+  });
+
+  it("still sends the digest when pruning fails, and never prunes for unauthorised callers", async () => {
+    const consoleError = jest.spyOn(console, "error").mockImplementation(() => {});
+    mockPrune.mockRejectedValue(new Error("db down"));
+    expect(await (await call("Bearer s3cret")).json()).toEqual({ sent: true });
+    consoleError.mockRestore();
+
+    mockPrune.mockClear();
+    await call("Bearer nope");
+    expect(mockPrune).not.toHaveBeenCalled();
   });
 
   it("emails the weekly digest when authorised", async () => {

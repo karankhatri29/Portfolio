@@ -1,10 +1,4 @@
-import { neon } from "@neondatabase/serverless";
-
-function sqlClient() {
-  const connectionString = process.env.DATABASE_URL;
-  if (!connectionString) throw new Error("DATABASE_URL is not configured");
-  return neon(connectionString);
-}
+import { sqlClient } from "@/lib/db";
 
 /** How many questions this visitor asked in the last hour. */
 export async function countRecentAsks(visitorHash: string, minutes = 60): Promise<number> {

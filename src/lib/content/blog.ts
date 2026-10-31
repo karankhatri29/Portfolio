@@ -1,4 +1,5 @@
-import { neon } from "@neondatabase/serverless";
+import { invalidateContent, cachedRead } from "@/lib/content/cache";
+import { retryRead, sqlClient } from "@/lib/db";
 
 import { readingMinutes } from "@/lib/content/blog-utils";
 
@@ -21,12 +22,6 @@ type PostRow = { slug: string; title: string; date: string; summary: string; con
 
 const safeSlug = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
-function sqlClient() {
-  const connectionString = process.env.DATABASE_URL;
-  if (!connectionString) throw new Error("DATABASE_URL is not configured");
-  return neon(connectionString);
-}
-
 function toPost(row: PostRow): BlogPost {
   return { slug: row.slug, title: row.title, date: row.date, summary: row.summary, content: row.content, tags: row.tags ?? [], status: row.status };
 }
@@ -37,11 +32,13 @@ function toSummary(row: PostRow): BlogPostSummary {
 }
 
 /** Published posts, newest first. */
-export async function listBlogPosts(): Promise<BlogPostSummary[]> {
+const readBlogPosts = cachedRead("posts", (): Promise<BlogPostSummary[]> => retryRead(async () => {
   const sql = sqlClient();
   const rows = (await sql`SELECT slug, title, date, summary, content, tags, status FROM posts WHERE status = 'published' ORDER BY date DESC, created_at DESC`) as PostRow[];
   return rows.map(toSummary);
-}
+}));
+
+export const listBlogPosts = (): Promise<BlogPostSummary[]> => readBlogPosts();
 
 /** A published post; drafts are only returned when includeDrafts is set (admin preview). */
 export async function getBlogPost(slug: string, options: { includeDrafts?: boolean } = {}): Promise<BlogPost | undefined> {
@@ -73,6 +70,7 @@ export async function createPost(input: BlogPost): Promise<BlogPost> {
     VALUES (${input.slug}, ${input.title}, ${input.date}, ${input.summary}, ${input.content}, ${JSON.stringify(input.tags)}::jsonb, ${input.status})
     RETURNING slug, title, date, summary, content, tags, status
   `) as PostRow[];
+  invalidateContent("posts");
   return toPost(rows[0]);
 }
 
@@ -84,11 +82,13 @@ export async function updatePost(slug: string, input: Omit<BlogPost, "slug">): P
     WHERE slug = ${slug}
     RETURNING slug, title, date, summary, content, tags, status
   `) as PostRow[];
+  invalidateContent("posts");
   return rows[0] ? toPost(rows[0]) : undefined;
 }
 
 export async function deletePost(slug: string): Promise<boolean> {
   const sql = sqlClient();
   const rows = (await sql`DELETE FROM posts WHERE slug = ${slug} RETURNING slug`) as { slug: string }[];
+  invalidateContent("posts");
   return rows.length > 0;
 }
