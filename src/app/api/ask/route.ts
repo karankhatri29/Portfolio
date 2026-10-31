@@ -3,7 +3,9 @@ import { NextResponse } from "next/server";
 import { withReportedFallback } from "@/lib/analytics/report";
 import { visitorHash } from "@/lib/analytics/tracking";
 import { portfolioContent } from "@/data/portfolio";
+import { answerFromSite } from "@/lib/ask/fallback";
 import { askGemini } from "@/lib/ask/gemini";
+import { recordHeal } from "@/lib/heal";
 import { buildKnowledge, contactEmail } from "@/lib/ask/knowledge";
 import { DEFAULT_DAILY_LIMIT, DEFAULT_HOURLY_LIMIT, LIMIT_MESSAGES, limitHit, readLimit } from "@/lib/ask/limits";
 import { buildSystemPrompt, validateQuestion } from "@/lib/ask/prompt";
@@ -56,7 +58,19 @@ export async function POST(request: Request) {
 
     const result = await askGemini({ question: checked.question, systemPrompt });
     // A blocked question is an expected outcome (off-topic or unsafe), so it reads as a normal answer.
-    if (!result.ok) return result.reason === "blocked" ? NextResponse.json({ answer: FALLBACKS.blocked }) : NextResponse.json({ error: FALLBACKS[result.reason] }, { status: 502 });
+    if (!result.ok && result.reason === "blocked") return NextResponse.json({ answer: FALLBACKS.blocked });
+    if (!result.ok) {
+      // The model is down or over quota: answer from the site's own content when the question matches something.
+      if (result.reason === "unavailable" || result.reason === "quota") {
+        const local = answerFromSite(checked.question, portfolioContent, projects, skills);
+        if (local) {
+          void recordHeal("gemini", "fallback-answer");
+          return NextResponse.json({ answer: local });
+        }
+      }
+      return NextResponse.json({ error: FALLBACKS[result.reason] }, { status: 502 });
+    }
+    if (result.fallback) void recordHeal("gemini", "fallback-model");
 
     return NextResponse.json({ answer: result.text });
   } catch (error) {

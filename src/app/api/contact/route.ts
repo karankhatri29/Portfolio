@@ -2,7 +2,7 @@ import { NextResponse, after } from "next/server";
 
 import { countRecentMessages, createMessage } from "@/lib/analytics/repository";
 import { visitorHash } from "@/lib/analytics/tracking";
-import { sendEmail } from "@/lib/notify/email";
+import { notifyContactMessage, resendPendingNotifications } from "@/lib/notify/contact";
 import { validateContactInput } from "@/lib/contact/validation";
 
 const MAX_MESSAGES_PER_WINDOW = 3;
@@ -32,17 +32,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Too many messages. Please try again in a few minutes." }, { status: 429 });
     }
 
-    await createMessage({ ...result.data, senderHash });
+    const id = await createMessage({ ...result.data, senderHash });
 
     // Best effort and after the response: the message is already saved, so a slow or failing mail provider must neither
-    // delay the visitor nor fail the request. Reply-To lets you answer the visitor straight from your inbox.
-    after(() =>
-      sendEmail({
-        subject: `New portfolio message from ${result.data.name}`,
-        text: `${result.data.name} <${result.data.email}> wrote:\n\n${result.data.message}\n\nReply to this email to answer them directly, or manage messages at ${new URL(request.url).origin}/admin/analytics`,
-        replyTo: result.data.email,
-      }),
-    );
+    // delay the visitor nor fail the request. If the email cannot go out it stays pending and is retried later.
+    const siteOrigin = new URL(request.url).origin;
+    after(async () => {
+      if (await notifyContactMessage({ id, ...result.data }, siteOrigin)) await resendPendingNotifications(siteOrigin);
+    });
 
     return NextResponse.json({ ok: true }, { status: 201 });
   } catch (error) {

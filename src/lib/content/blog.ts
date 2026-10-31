@@ -1,5 +1,5 @@
 import { invalidateContent, cachedRead } from "@/lib/content/cache";
-import { retryRead, sqlClient } from "@/lib/db";
+import { sqlClient } from "@/lib/db";
 
 import { readingMinutes } from "@/lib/content/blog-utils";
 
@@ -32,11 +32,11 @@ function toSummary(row: PostRow): BlogPostSummary {
 }
 
 /** Published posts, newest first. */
-const readBlogPosts = cachedRead("posts", (): Promise<BlogPostSummary[]> => retryRead(async () => {
+const readBlogPosts = cachedRead("posts", async (): Promise<BlogPostSummary[]> => {
   const sql = sqlClient();
   const rows = (await sql`SELECT slug, title, date, summary, content, tags, status FROM posts WHERE status = 'published' ORDER BY date DESC, created_at DESC`) as PostRow[];
   return rows.map(toSummary);
-}));
+});
 
 export const listBlogPosts = (): Promise<BlogPostSummary[]> => readBlogPosts();
 

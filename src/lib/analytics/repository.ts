@@ -93,10 +93,43 @@ export async function createMessage(input: { name: string; email: string; messag
   const sql = sqlClient();
   const id = crypto.randomUUID();
   await sql`
-    INSERT INTO contact_messages (id, name, email, message, sender_hash)
-    VALUES (${id}, ${input.name}, ${input.email}, ${input.message}, ${input.senderHash})
+    INSERT INTO contact_messages (id, name, email, message, sender_hash, notify_state)
+    VALUES (${id}, ${input.name}, ${input.email}, ${input.message}, ${input.senderHash}, 'pending')
   `;
   return id;
+}
+
+export type PendingNotification = { id: string; name: string; email: string; message: string };
+
+/** Messages whose "new message" email has not gone out yet (the provider was down), oldest first. */
+export async function listPendingNotifications(limit: number, days = 7): Promise<PendingNotification[]> {
+  const sql = sqlClient();
+  return (await sql`
+    SELECT id, name, email, message FROM contact_messages
+    WHERE notify_state = 'pending' AND created_at >= now() - make_interval(days => ${days}::int)
+    ORDER BY created_at ASC LIMIT ${limit}::int
+  `) as PendingNotification[];
+}
+
+export async function markMessageNotified(id: string): Promise<void> {
+  const sql = sqlClient();
+  await sql`UPDATE contact_messages SET notify_state = 'sent' WHERE id = ${id}`;
+}
+
+export type HealCount = { dependency: string; action: string; count: number };
+
+export async function recordHealEvent(dependency: string, action: string): Promise<void> {
+  const sql = sqlClient();
+  await sql`INSERT INTO heal_events (dependency, action) VALUES (${dependency}, ${action})`;
+}
+
+export async function countHealEvents(days: number): Promise<HealCount[]> {
+  const sql = sqlClient();
+  return (await sql`
+    SELECT dependency, action, COUNT(*)::int AS count FROM heal_events
+    WHERE created_at >= now() - make_interval(days => ${days}::int)
+    GROUP BY dependency, action ORDER BY count DESC, dependency ASC
+  `) as HealCount[];
 }
 
 export async function countRecentMessages(senderHash: string, minutes: number): Promise<number> {
@@ -408,6 +441,7 @@ export async function pruneOldAnalytics(eventDays: number): Promise<void> {
   const sql = sqlClient();
   await sql`DELETE FROM events WHERE created_at < now() - make_interval(days => ${eventDays}::int)`;
   await sql`DELETE FROM error_logs WHERE created_at < now() - make_interval(days => ${ERROR_RETENTION_DAYS}::int)`;
+  await sql`DELETE FROM heal_events WHERE created_at < now() - make_interval(days => ${ERROR_RETENTION_DAYS}::int)`;
 }
 
 export async function countRecentErrors(minutes: number): Promise<number> {

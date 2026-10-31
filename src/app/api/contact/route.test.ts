@@ -1,19 +1,24 @@
 /**
  * @jest-environment node
  */
-import { countRecentMessages, createMessage } from "@/lib/analytics/repository";
+import { countRecentMessages, createMessage, listPendingNotifications, markMessageNotified } from "@/lib/analytics/repository";
 import { sendEmail } from "@/lib/notify/email";
 
 import { POST } from "./route";
 
-jest.mock("@/lib/analytics/repository", () => ({ countRecentMessages: jest.fn(), createMessage: jest.fn() }));
-// `after` only works inside a real Next.js request, so run the callback straight away.
-jest.mock("next/server", () => ({ ...jest.requireActual("next/server"), after: (callback: () => unknown) => void callback() }));
+jest.mock("@/lib/analytics/repository", () => ({ countRecentMessages: jest.fn(), createMessage: jest.fn(), listPendingNotifications: jest.fn(), markMessageNotified: jest.fn() }));
+jest.mock("@/lib/heal", () => ({ recordHeal: jest.fn() }));
+// `after` only works inside a real Next.js request, so run the callback straight away and let tests wait for it.
+const mockAfterTasks: Promise<unknown>[] = [];
+const afterTasks = () => Promise.all(mockAfterTasks.splice(0));
+jest.mock("next/server", () => ({ ...jest.requireActual("next/server"), after: (callback: () => unknown) => void mockAfterTasks.push(Promise.resolve(callback())) }));
 jest.mock("@/lib/notify/email", () => ({ sendEmail: jest.fn() }));
 
 const mockCount = jest.mocked(countRecentMessages);
 const mockCreate = jest.mocked(createMessage);
 const mockEmail = jest.mocked(sendEmail);
+const mockPending = jest.mocked(listPendingNotifications);
+const mockMarked = jest.mocked(markMessageNotified);
 
 const valid = { name: "Ada", email: "ada@example.com", message: "Hello, I would like to talk about a role." };
 
@@ -29,6 +34,8 @@ beforeEach(() => {
   mockCount.mockResolvedValue(0);
   mockCreate.mockResolvedValue("message-id");
   mockEmail.mockResolvedValue("sent");
+  mockPending.mockResolvedValue([]);
+  mockMarked.mockResolvedValue(undefined);
 });
 
 describe("/api/contact", () => {
@@ -48,6 +55,34 @@ describe("/api/contact", () => {
     expect(text).toContain("ada@example.com");
     expect(text).toContain(valid.message);
     expect(text).toContain("http://localhost/admin/analytics");
+  });
+
+  it("marks the message as notified once the email has gone out", async () => {
+    await send(valid);
+    await afterTasks();
+
+    expect(mockMarked).toHaveBeenCalledWith("message-id");
+  });
+
+  it("leaves the message pending when the email fails, so it is retried later, and does not retry others", async () => {
+    mockEmail.mockResolvedValue("failed");
+
+    expect((await send(valid)).status).toBe(201);
+    await afterTasks();
+
+    expect(mockMarked).not.toHaveBeenCalled();
+    expect(mockPending).not.toHaveBeenCalled();
+  });
+
+  it("catches up on earlier unsent notifications once the provider works again", async () => {
+    mockPending.mockResolvedValue([{ id: "old", name: "Bob", email: "bob@example.com", message: "An earlier message that never got emailed." }]);
+
+    await send(valid);
+    await afterTasks();
+
+    expect(mockEmail).toHaveBeenCalledTimes(2);
+    expect(mockEmail.mock.calls[1][0]).toMatchObject({ subject: "[Resent] New portfolio message from Bob", replyTo: "bob@example.com" });
+    expect(mockMarked).toHaveBeenCalledWith("old");
   });
 
   it("sets Reply-To to the visitor so the owner can answer from their inbox", async () => {
