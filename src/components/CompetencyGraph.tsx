@@ -30,7 +30,7 @@ function Detail({ id, graph, skills, projects, onSelect }: Props & { id: string;
   const skillById = (nodeId: string) => skills.find((skill) => competencyId(skill.id) === nodeId);
   const toolLabel = (nodeId: string) => graph.nodes.find((node) => node.id === nodeId)?.label ?? nodeId;
   const heading = "font-display text-2xl font-semibold";
-  const label = "mt-6 text-sm font-semibold text-muted";
+  const label = "mt-6 text-xs font-semibold uppercase tracking-[0.18em] text-muted";
 
   const skill = skillById(id);
   if (skill) {
@@ -108,7 +108,7 @@ function Overview({ skills, onSelect }: { skills: SkillRecord[]; onSelect: Selec
   return (
     <div>
       <h3 className="font-display text-2xl font-semibold">How to read this</h3>
-      <p className="mt-3 leading-7 text-muted">Each competency links to the tools I work with. Glowing tools were used in a project, and link on to it as evidence; faint dots are skills without a listed project yet. Select any node to see the detail.</p>
+      <p className="mt-3 leading-7 text-muted">Each competency links to the tools I work with. Tools outlined in the accent colour were used in a project, and link on to it as evidence; dashed ones are skills without a listed project yet. Select any node to see the detail.</p>
       <ul className="mt-6 space-y-3">
         {skills.map((skill) => (
           <li key={skill.id}>
@@ -123,12 +123,12 @@ function Overview({ skills, onSelect }: { skills: SkillRecord[]; onSelect: Selec
   );
 }
 
-type Look = { text: string; font: string };
+type Look = { shape: string; text: string; font: string };
 const looks = {
-  competency: { text: "fill-ink", font: "text-[18px] font-semibold" },
-  project: { text: "fill-ink", font: "text-[15px] font-medium" },
-  provenTool: { text: "fill-ink", font: "text-[14px] font-medium" },
-  tool: { text: "fill-muted", font: "text-[12.5px]" },
+  competency: { shape: "fill-accent stroke-accent", text: "fill-paper", font: "text-[18px] font-semibold" },
+  project: { shape: "fill-paper stroke-ink", text: "fill-ink", font: "text-[15px] font-medium" },
+  provenTool: { shape: "fill-paper stroke-accent", text: "fill-ink", font: "text-[14px] font-medium" },
+  tool: { shape: "fill-paper stroke-ink/25", text: "fill-muted", font: "text-[12.5px]" },
 } satisfies Record<string, Look>;
 
 const lookFor = (node: GraphNode): Look => (node.kind === "tool" ? (node.proven ? looks.provenTool : looks.tool) : looks[node.kind]);
@@ -137,7 +137,7 @@ function Stat({ value, label }: { value: number; label: string }) {
   return (
     <div className="text-center">
       <p className="font-display text-3xl font-semibold text-accent sm:text-4xl">{value}</p>
-      <p className="mt-1 text-xs text-muted">{label}</p>
+      <p className="mt-1 text-xs uppercase tracking-[0.16em] text-muted">{label}</p>
     </div>
   );
 }
@@ -177,26 +177,14 @@ export function CompetencyGraph({ graph, skills, projects }: Props) {
       <div className="mt-10 hidden gap-8 lg:grid lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)]">
         <div>
           <svg viewBox={`0 0 ${graph.width} ${graph.height}`} role="group" aria-label="Skills knowledge graph" className="h-auto w-full" onMouseLeave={() => setHovered(null)}>
-            <defs>
-              <filter id="cg-glow" x="-100%" y="-100%" width="300%" height="300%">
-                <feGaussianBlur stdDeviation="3" result="blur" />
-                <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-              </filter>
-            </defs>
             <g aria-hidden="true">
               {graph.edges.map((edge) => {
                 const a = nodes.get(edge.source)!;
                 const b = nodes.get(edge.target)!;
                 const evidence = edge.target.startsWith("project:");
                 const on = !lit || (lit.has(edge.source) && lit.has(edge.target));
-                const glowing = Boolean(lit) && on;
-                const tone = glowing ? "stroke-accent opacity-50" : on ? (evidence ? "stroke-accent opacity-40" : "stroke-[rgb(214,228,240)] opacity-[0.2]") : "stroke-[rgb(214,228,240)] opacity-[0.05]";
-                return (
-                  <g key={`${edge.source}-${edge.target}`}>
-                    <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} className={`transition-opacity duration-300 ${tone}`} strokeWidth={glowing ? 1.6 : evidence ? 1.3 : 1} />
-                    {glowing ? <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} className="graph-flow stroke-accent" strokeWidth={2.2} strokeLinecap="round" filter="url(#cg-glow)" /> : null}
-                  </g>
-                );
+                const tone = lit && on ? "stroke-accent opacity-90" : on ? (evidence ? "stroke-accent opacity-50" : "stroke-ink opacity-[0.18]") : "stroke-ink opacity-[0.05]";
+                return <line key={`${edge.source}-${edge.target}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} className={`transition-opacity duration-200 ${tone}`} strokeWidth={lit && on ? 2 : evidence ? 1.5 : 1} />;
               })}
             </g>
             {graph.nodes.map((node) => {
@@ -221,41 +209,21 @@ export function CompetencyGraph({ graph, skills, projects }: Props) {
                   style={{ animationDelay: `${(node.kind === "competency" ? 0 : node.kind === "tool" ? 150 : 450) + (order.get(node.id) ?? 0) * 12}ms` }}
                 >
                   <rect x={-node.width / 2 - 4} y={-node.height / 2 - 4} width={node.width + 8} height={node.height + 8} rx={(node.height + 8) / 2} className={`fill-none stroke-accent stroke-2 transition-opacity ${isSelected ? "opacity-100" : "opacity-0 group-focus-visible:opacity-100"}`} />
-                  <rect x={-node.width / 2} y={-node.height / 2} width={node.width} height={node.height} fill="transparent" />
-                  <g transform={`translate(${-node.width / 2 + 13} 0)`} aria-hidden="true">
-                    {node.kind === "competency" ? (
-                      <>
-                        <circle r={15} className="graph-twinkle fill-accent opacity-20" />
-                        <path d="M0 -10 L2.4 -2.4 L10 0 L2.4 2.4 L0 10 L-2.4 2.4 L-10 0 L-2.4 -2.4Z" className="fill-accent" filter="url(#cg-glow)" />
-                      </>
-                    ) : node.kind === "project" ? (
-                      <>
-                        <circle r={6} className="fill-none stroke-ink" strokeWidth={1.5} />
-                        <circle r={2} className="fill-ink" />
-                      </>
-                    ) : node.proven ? (
-                      <>
-                        <circle r={10} className="graph-twinkle fill-accent opacity-20" />
-                        <circle r={4.5} className="fill-accent" filter="url(#cg-glow)" />
-                      </>
-                    ) : (
-                      <circle r={2.6} className="fill-[rgb(214,228,240)] opacity-40" />
-                    )}
-                  </g>
-                  <text x={9} textAnchor="middle" dominantBaseline="central" className={`${style.text} ${style.font} select-none`}>{node.label}</text>
+                  <rect x={-node.width / 2} y={-node.height / 2} width={node.width} height={node.height} rx={node.kind === "project" ? 6 : node.height / 2} className={style.shape} strokeWidth={node.kind === "tool" && !node.proven ? 1 : 1.5} strokeDasharray={node.kind === "tool" && !node.proven ? "3 3" : undefined} />
+                  <text textAnchor="middle" dominantBaseline="central" className={`${style.text} ${style.font} select-none`}>{node.label}</text>
                 </g>
               );
             })}
           </svg>
           <ul className="mt-4 flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs text-muted" aria-label="Legend">
-            <li className="flex items-center gap-2"><svg aria-hidden="true" viewBox="-12 -12 24 24" className="h-4 w-4"><path d="M0 -10 L2.4 -2.4 L10 0 L2.4 2.4 L0 10 L-2.4 2.4 L-10 0 L-2.4 -2.4Z" className="fill-accent" /></svg>Competency</li>
-            <li className="flex items-center gap-2"><svg aria-hidden="true" viewBox="-12 -12 24 24" className="h-4 w-4"><circle r={9} className="fill-accent opacity-25" /><circle r={4.5} className="fill-accent" /></svg>Tool used in a project</li>
-            <li className="flex items-center gap-2"><svg aria-hidden="true" viewBox="-12 -12 24 24" className="h-4 w-4"><circle r={2.6} className="fill-[rgb(214,228,240)] opacity-50" /></svg>Other tool</li>
-            <li className="flex items-center gap-2"><svg aria-hidden="true" viewBox="-12 -12 24 24" className="h-4 w-4"><circle r={6} className="fill-none stroke-ink" strokeWidth={1.5} /><circle r={2} className="fill-ink" /></svg>Project</li>
+            <li className="flex items-center gap-2"><span aria-hidden="true" className="h-3 w-5 rounded-full bg-accent" />Competency</li>
+            <li className="flex items-center gap-2"><span aria-hidden="true" className="h-3 w-5 rounded-full border border-accent" />Tool used in a project</li>
+            <li className="flex items-center gap-2"><span aria-hidden="true" className="h-3 w-5 rounded-full border border-dashed border-ink/40" />Other tool</li>
+            <li className="flex items-center gap-2"><span aria-hidden="true" className="h-3 w-5 rounded-sm border border-ink" />Project</li>
           </ul>
         </div>
 
-        <aside aria-live="polite" aria-label="Evidence" className="self-start border border-accent/20 bg-ink/[0.035] p-6 shadow-[0_0_44px_-16px_rgb(var(--color-accent)/0.45)] backdrop-blur-xl lg:p-8">
+        <aside aria-live="polite" aria-label="Evidence" className="border-t border-ink/10 pt-6 lg:border-l lg:border-t-0 lg:pl-10 lg:pt-0">
           {selected ? <Detail id={selected} graph={graph} skills={skills} projects={projects} onSelect={toggle} /> : <Overview skills={skills} onSelect={toggle} />}
           {selected ? <button type="button" onClick={() => setSelected(null)} className="mt-8 text-sm text-muted underline-offset-4 hover:text-accent hover:underline">Clear selection (Esc)</button> : null}
         </aside>
@@ -266,7 +234,7 @@ export function CompetencyGraph({ graph, skills, projects }: Props) {
           const id = competencyId(skill.id);
           const open = selected === id;
           return (
-            <li key={skill.id} className="border border-accent/15 bg-ink/[0.03] backdrop-blur">
+            <li key={skill.id} className="border border-ink/10">
               <button type="button" aria-expanded={open} onClick={() => toggle(id)} className="flex w-full items-center justify-between p-5 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent">
                 <span className="font-semibold">{skill.name}</span>
                 <span aria-hidden="true" className={`text-accent transition-transform ${open ? "rotate-45" : ""}`}>+</span>
