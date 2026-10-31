@@ -63,3 +63,18 @@ body::before {
 /* Below-the-fold sections skip rendering work until they are near the viewport. */
 .defer-render { content-visibility: auto; contain-intrinsic-size: auto 800px; }
 @media print { .defer-render { content-visibility: visible; } }
+
+/* Hero name: each line sweeps in with a soft edge while it rises and resolves out of a glowing blur. The real text is always in the page;
+   the mask only reveals it, so nothing moves or shifts. Without animation (reduced motion) the name is simply there. */
+@keyframes name-in {
+  from { -webkit-mask-position: 100% 0; mask-position: 100% 0; transform: translateY(0.28em); filter: blur(12px) brightness(2.4); }
+  to { -webkit-mask-position: 0 0; mask-position: 0 0; transform: none; filter: none; }
+}
+.name-in {
+  -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 33.3%, transparent 66.6%);
+  mask-image: linear-gradient(90deg, #000 0%, #000 33.3%, transparent 66.6%);
+  -webkit-mask-size: 300% 100%;
+  mask-size: 300% 100%;
+  animation: name-in 1.15s cubic-bezier(0.22, 1, 0.36, 1) var(--delay) both;
+}
+@media (prefers-reduced-motion: reduce) { .name-in { animation: none; -webkit-mask-image: none; mask-image: none; } }

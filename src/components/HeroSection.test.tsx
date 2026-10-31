@@ -201,3 +201,33 @@ describe("HeroSection terminal card", () => {
     expect((portfolioContent.terminalTeasers ?? []).length).toBeGreaterThan(1);
   });
 });
+
+describe("HeroSection structure", () => {
+  it("keeps the real name as the heading's accessible name, whatever the reveal animation does", () => {
+    render(<HeroSection content={portfolioContent} />);
+
+    expect(screen.getByRole("heading", { level: 1, name: portfolioContent.name })).toBeInTheDocument();
+  });
+
+  it("puts the name and portrait first, with the path and availability after the buttons", () => {
+    const { container } = render(<HeroSection content={portfolioContent} />);
+    const position = (node: Element | null) => (node ? Array.from(container.querySelectorAll("*")).indexOf(node) : -1);
+
+    const heading = container.querySelector("h1");
+    const buttons = screen.getByRole("link", { name: "Get in touch" });
+    const path = screen.getByRole("list", { name: "Path" });
+    const availability = screen.getByText(portfolioContent.availability!.label);
+    expect(position(heading)).toBeLessThan(position(buttons));
+    expect(position(buttons)).toBeLessThan(position(path));
+    expect(position(path)).toBeLessThan(position(availability));
+  });
+
+  it("reveals each name line with the CSS animation, one after another", () => {
+    const { container } = render(<HeroSection content={portfolioContent} />);
+
+    const delays = [...container.querySelectorAll<HTMLElement>(".name-in")].map((line) => parseInt(line.style.getPropertyValue("--delay"), 10));
+    expect(delays).toHaveLength(portfolioContent.name.split(" ").length);
+    expect([...delays].sort((a, b) => a - b)).toEqual(delays);
+    expect(new Set(delays).size).toBe(delays.length);
+  });
+});
