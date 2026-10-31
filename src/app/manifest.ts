@@ -9,8 +9,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Portfolio of an AI engineer: NLP, knowledge graphs and applied AI.",
     start_url: "/",
     display: "standalone",
-    background_color: "#131918",
-    theme_color: "#131918",
+    background_color: "#070b10",
+    theme_color: "#070b10",
     icons: [
       { src: "/brand/k3/logo-k3-192.png", sizes: "192x192", type: "image/png" },
       { src: "/brand/k3/logo-k3-512.png", sizes: "512x512", type: "image/png" },

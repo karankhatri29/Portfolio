@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Geist, Space_Grotesk } from "next/font/google";
 
 import "./globals.css";
 import { Analytics } from "@/components/Analytics";
@@ -7,9 +8,13 @@ import { Providers } from "@/components/Providers";
 import { portfolioContent } from "@/data/portfolio";
 import { SITE_NAME, siteUrl } from "@/lib/site";
 
+// Both are variable fonts, self-hosted by next/font, so there is no request to Google at runtime.
+const display = Space_Grotesk({ subsets: ["latin"], variable: "--font-display", display: "swap" });
+const sans = Geist({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
+
 const role = portfolioContent.headline.split(".")[0];
 
-export const viewport: Viewport = { themeColor: "#131918" };
+export const viewport: Viewport = { themeColor: "#070b10" };
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
@@ -28,7 +33,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className={`dark ${display.variable} ${sans.variable}`}>
       <body className="font-sans antialiased">
         <Providers>{children}</Providers>
         <Analytics />

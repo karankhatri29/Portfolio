@@ -144,3 +144,30 @@ describe("HeroSection", () => {
     });
   });
 });
+
+describe("HeroSection layout", () => {
+  it("shows the typing terminal card, and opens the full terminal from it", () => {
+    render(<HeroSection content={portfolioContent} />);
+
+    const card = screen.getByRole("group", { name: "Terminal summary" });
+    expect(card.closest(".sr-only")).toBeNull();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    fireEvent.click(card);
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("uses the transparent cutout portrait", () => {
+    render(<HeroSection content={portfolioContent} />);
+
+    expect(screen.getByRole("img", { name: /Karan Kaushik Khatri smiling/ }).getAttribute("src")).toContain("karan-khatri-cutout");
+  });
+
+  it("does not label skills around the portrait", () => {
+    const skills = ["Python", "NLP"].map((name, index) => ({ id: String(index), name, description: "", tools: [] }));
+    render(<HeroSection content={portfolioContent} skills={skills} />);
+
+    expect(screen.queryByText("Python")).not.toBeInTheDocument();
+    expect(screen.queryByText("NLP")).not.toBeInTheDocument();
+  });
+});

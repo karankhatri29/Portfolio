@@ -4,20 +4,32 @@
 
 :root {
   --color-ink: 236 236 232;
-  --color-paper: 19 25 24;
+  --color-paper: 7 11 16;
   --color-accent: 63 205 238;
   --color-muted: 166 174 168;
 }
 
-.light {
-  --color-ink: 25 35 32;
-  --color-paper: 247 244 237;
-  --color-accent: 14 116 144;
-  --color-muted: 86 100 91;
-}
-
-html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; scroll-padding-top: 6rem; }
 body { background: rgb(var(--color-paper)); color: rgb(var(--color-ink)); }
+
+/* The whole site sits in one sky: a fixed, static layer of stars and two faint colour glows behind every page.
+   Each star layer tiles at a different size so the pattern does not visibly repeat. No JavaScript, no animation. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    radial-gradient(60% 40% at 12% -5%, rgb(63 205 238 / 0.10), transparent 70%),
+    radial-gradient(50% 36% at 96% 38%, rgb(90 112 236 / 0.08), transparent 70%),
+    radial-gradient(1px 1px at 23px 37px, rgb(214 228 240 / 0.65), transparent),
+    radial-gradient(1px 1px at 141px 109px, rgb(214 228 240 / 0.45), transparent),
+    radial-gradient(1.5px 1.5px at 187px 61px, rgb(214 228 240 / 0.75), transparent),
+    radial-gradient(1px 1px at 251px 223px, rgb(214 228 240 / 0.4), transparent),
+    radial-gradient(2px 2px at 331px 151px, rgb(63 205 238 / 0.55), transparent);
+  background-size: 100% 100%, 100% 100%, 211px 223px, 293px 271px, 347px 331px, 397px 389px, 521px 487px;
+}
 
 .timeline-item[data-reveal] { transition: opacity 0.6s ease, transform 0.6s ease; }
 .timeline-item[data-reveal="hidden"] { opacity: 0; transform: translateY(16px); }

@@ -16,7 +16,7 @@ export default function GlobalError({ error, retry, reset }: GlobalErrorProps) {
 
   return (
     <html lang="en">
-      <body style={{ margin: 0, background: "#131918", color: "#ecece8", fontFamily: "system-ui, sans-serif" }}>
+      <body style={{ margin: 0, background: "#070b10", color: "#ecece8", fontFamily: "system-ui, sans-serif" }}>
         <main style={{ maxWidth: 640, margin: "0 auto", padding: "96px 24px" }}>
           <p style={{ color: "#3fcdee", letterSpacing: "0.2em", textTransform: "uppercase", fontSize: 14, fontWeight: 600 }}>Something went wrong</p>
           <h1 style={{ fontSize: 40, margin: "16px 0" }}>The site hit an unexpected error.</h1>

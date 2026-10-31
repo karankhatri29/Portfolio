@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { CSSProperties } from "react";
 
+import { NeuralField } from "@/components/NeuralField";
 import { HeroTerminal } from "@/components/terminal/HeroTerminal";
 import type { PortfolioContent, TerminalLine } from "@/data/portfolio";
 import type { TerminalContext } from "@/lib/ask/commands";
@@ -46,7 +47,8 @@ function TerminalCard({ lines }: { lines: TerminalLine[] }) {
   const rows = scheduleTerminal(lines);
 
   return (
-    <div role="group" aria-label="Terminal summary" className="overflow-hidden border border-ink/15 bg-paper/95 font-mono text-[13px] leading-6 shadow-2xl shadow-black/40 backdrop-blur">
+    <div role="group" aria-label="Terminal summary" className="group relative overflow-hidden border border-accent/30 bg-paper/50 font-mono text-[13px] leading-6 shadow-[0_0_44px_-12px_rgb(var(--color-accent)/0.5)] backdrop-blur-xl transition duration-300 hover:border-accent/60 hover:shadow-[0_0_52px_-8px_rgb(var(--color-accent)/0.65)]">
+      <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent to-transparent" />
       <div aria-hidden="true" className="flex items-center gap-2 border-b border-ink/10 px-4 py-2.5">
         <span className="h-2.5 w-2.5 rounded-full bg-ink/25" />
         <span className="h-2.5 w-2.5 rounded-full bg-ink/25" />
@@ -66,50 +68,75 @@ function TerminalCard({ lines }: { lines: TerminalLine[] }) {
   );
 }
 
+
+const roleSize = "whitespace-nowrap text-[clamp(3.4rem,15vw,11rem)]";
+
 export function HeroSection({ content, bookingUrl, projects, skills }: { content: PortfolioContent; bookingUrl?: string; projects?: Project[]; skills?: SkillRecord[] }) {
   const [role, ...rest] = content.headline.split(/(?<=\.)\s+/);
   const claim = rest.join(" ");
 
   return (
-    <section aria-labelledby="hero-title" className="grid items-center gap-14 border-b border-ink/10 py-16 lg:grid-cols-[1.2fr_0.8fr] lg:gap-10 lg:py-28">
-      <div>
-        <p className="mb-5 text-sm font-semibold uppercase tracking-[0.2em] text-accent">{content.eyebrow}</p>
-        <h1 id="hero-title" className="max-w-3xl font-display text-5xl font-semibold leading-[0.95] tracking-tight sm:text-7xl">{claim ? <><span className="block text-accent">{role}</span>{" "}<span className="block">{claim}</span></> : content.headline}</h1>
-        <p className="mt-8 max-w-xl text-lg leading-8 text-muted">{content.summary}</p>
-        {content.availability?.open ? (
-          <p className="mt-6 inline-flex items-center gap-2 border border-accent/40 px-3 py-1 text-sm font-medium">
-            <span aria-hidden="true" className="h-2 w-2 rounded-full bg-green-500" />
-            {content.availability.label}
-          </p>
-        ) : null}
-        <div className="mt-8 flex flex-wrap items-center gap-3">
-          <a href="#contact" className="bg-accent px-5 py-2.5 text-sm font-semibold text-paper transition hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper">Get in touch</a>
-          <Link href="/resume" className="border border-ink/30 px-5 py-2.5 text-sm font-semibold transition hover:border-accent hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">View resume</Link>
-          {bookingUrl ? <a href={bookingUrl} target="_blank" rel="noopener noreferrer" data-track="booking" className="border border-ink/30 px-5 py-2.5 text-sm font-semibold transition hover:border-accent hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">Book a call</a> : null}
-        </div>
-        <p className="mt-6 max-w-sm border-l border-accent/50 pl-6 text-sm leading-7 text-muted">Selected work, field notes, and practical ideas for making digital products feel more human.</p>
-      </div>
+    <section aria-labelledby="hero-title" data-field-host className="relative isolate border-b border-ink/10 pt-8 lg:pt-12">
+      <NeuralField className="pointer-events-none absolute inset-y-0 left-1/2 -z-10 h-full w-screen -translate-x-1/2" />
+      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-1/4 bg-gradient-to-t from-paper to-transparent" />
 
-      <div className="relative mx-auto w-full max-w-sm pr-3 lg:max-w-none lg:pb-12 lg:pr-4">
-        <div className="relative">
-          <div aria-hidden="true" className="absolute inset-0 translate-x-3 translate-y-3 border border-accent/40 lg:translate-x-4 lg:translate-y-4" />
-          <figure className="relative aspect-[3/4] w-full overflow-hidden border border-ink/10 bg-ink/5">
+      <div className="relative">
+        <div className="relative h-[32rem] sm:h-[38rem] lg:h-[46rem]">
+          <div className="absolute inset-x-0 top-0 z-30 flex flex-wrap items-start justify-between gap-3">
+            <p className="text-sm font-medium text-muted">{content.eyebrow}</p>
+            {content.availability?.open ? (
+              <p className="inline-flex items-center gap-2.5 rounded-full border border-accent/30 bg-accent/10 py-1.5 pl-3.5 pr-4 text-sm font-medium text-ink backdrop-blur">
+                <span aria-hidden="true" className="relative flex h-2.5 w-2.5">
+                  <span className="absolute inline-flex h-full w-full rounded-full bg-accent opacity-60 motion-safe:animate-ping" />
+                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-accent" />
+                </span>
+                {content.availability.label}
+              </p>
+            ) : null}
+          </div>
+
+          {/* The role is set huge behind the portrait; the claim is shown in the dock below and kept here for assistive tech. */}
+          <h1 id="hero-title" className="absolute inset-x-0 top-[14%] z-10 text-center font-display font-bold leading-none tracking-tighter sm:top-[11%] lg:top-[9%]">
+            {claim ? (
+              <>
+                <span className={`block bg-gradient-to-b from-ink from-45% to-accent bg-clip-text text-transparent ${roleSize}`}>{role}</span>
+                <span className="sr-only"> {claim}</span>
+              </>
+            ) : <span className="block text-4xl sm:text-6xl">{content.headline}</span>}
+          </h1>
+
+          <div aria-hidden="true" className="absolute bottom-0 left-1/2 z-[12] h-[62%] w-[min(34rem,92%)] -translate-x-1/2 rounded-full bg-accent/25 blur-3xl" />
+
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex h-[70%] justify-center lg:h-[68%] lg:-translate-x-[7%]">
             <Image
-              src="/karan-khatri.png"
-              alt={`${content.name} smiling, in a black suit and tie, standing on a lawn`}
-              width={719}
-              height={959}
+              src="/karan-khatri-cutout.webp"
+              alt={`${content.name} smiling, in a black suit and tie`}
+              width={458}
+              height={619}
               priority
               unoptimized
-              className="h-full w-full object-cover object-[50%_20%]"
+              className="h-full w-auto object-contain object-bottom [mask-image:linear-gradient(to_bottom,#000_80%,transparent)]"
             />
-            <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-paper/80 to-transparent" />
-          </figure>
+          </div>
+
         </div>
-        <div className="relative -mt-10 ml-4 mr-1 sm:ml-6 sm:mr-0 sm:w-80 lg:absolute lg:-left-6 lg:bottom-4 lg:m-0">
-          <HeroTerminal context={terminalContext(content, projects, skills)}>
-            <TerminalCard lines={content.terminal} />
-          </HeroTerminal>
+
+        <div className="relative z-30 -mt-2 grid gap-6 pb-10 lg:absolute lg:inset-x-0 lg:bottom-0 lg:mt-0 lg:grid-cols-2 lg:items-end lg:pb-8">
+          <div className="lg:col-start-2 lg:ml-auto lg:max-w-[22rem]">
+            {claim ? <p aria-hidden="true" className="font-display text-2xl font-semibold leading-tight tracking-tight sm:text-3xl lg:text-[1.7rem]">{claim}</p> : null}
+            <p className="mt-4 text-base leading-7 text-muted">{content.summary}</p>
+            <div className="mt-6 grid gap-3 sm:flex sm:flex-wrap sm:items-center">
+              <a href="#contact" className="flex min-h-12 items-center justify-center bg-accent px-6 text-base font-semibold text-paper transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_28px_-6px_rgb(var(--color-accent)/0.6)] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper">Get in touch</a>
+              <Link href="/resume" className="flex min-h-12 items-center justify-center border border-ink/30 bg-paper/40 px-6 text-base font-semibold backdrop-blur transition duration-200 hover:-translate-y-0.5 hover:border-accent hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">View resume</Link>
+              {bookingUrl ? <a href={bookingUrl} target="_blank" rel="noopener noreferrer" data-track="booking" className="flex min-h-12 items-center justify-center border border-ink/30 bg-paper/40 px-6 text-base font-semibold backdrop-blur transition duration-200 hover:-translate-y-0.5 hover:border-accent hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">Book a call</a> : null}
+            </div>
+            <p className="mt-6 max-w-sm border-l border-accent/50 pl-6 text-sm leading-7 text-muted">Selected work, field notes, and practical ideas for making digital products feel more human.</p>
+          </div>
+          <div className="w-full max-w-sm lg:col-start-1 lg:row-start-1 lg:max-w-[21rem]">
+            <HeroTerminal context={terminalContext(content, projects, skills)}>
+              <TerminalCard lines={content.terminal} />
+            </HeroTerminal>
+          </div>
         </div>
       </div>
     </section>
