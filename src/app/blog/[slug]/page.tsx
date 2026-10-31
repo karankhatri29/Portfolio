@@ -7,6 +7,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { MarkdownContent } from "@/components/MarkdownContent";
 import { PostNav } from "@/components/PostNav";
 import { RelatedPosts, relatedPosts } from "@/components/RelatedPosts";
+import { ReadingProgress } from "@/components/ReadingProgress";
 import { ShareLinks } from "@/components/ShareLinks";
 import { TableOfContents } from "@/components/TableOfContents";
 import { extractHeadings, formatPostDate, readingMinutes } from "@/lib/content/blog-utils";
@@ -52,6 +53,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
 
   return (
     <main className="mx-auto max-w-3xl px-5 py-16 lg:px-8 lg:py-28">
+      <ReadingProgress />
       <JsonLd
         data={{
           "@context": "https://schema.org",
@@ -72,12 +74,12 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         }}
       />
       {isDraft ? null : <JsonLd data={breadcrumbs([{ name: "Writing", path: "/blog" }, { name: post.title, path: `/blog/${post.slug}` }])} />}
-      <Link href="/blog" className="text-sm font-semibold text-accent underline underline-offset-4">All writing</Link>
+      <Link href="/blog" className="inline-flex min-h-11 items-center text-sm font-semibold text-accent underline underline-offset-4">All writing</Link>
       {isDraft ? <p role="status" className="mt-6 border border-accent/50 bg-accent/10 p-3 text-sm font-semibold">Draft preview. Visitors cannot see this post until you publish it.</p> : null}
-      <p className="mt-8 text-sm font-semibold uppercase tracking-[0.2em] text-accent">
+      <p className="mt-8 text-sm font-medium text-accent">
         <time dateTime={post.date}>{formatPostDate(post.date)}</time> · {minutes} min read
       </p>
-      <h1 className="mt-5 font-display text-4xl font-semibold tracking-tight sm:text-6xl">{post.title}</h1>
+      <h1 className="mt-4 font-display text-4xl font-semibold leading-[1.08] tracking-tight sm:text-5xl">{post.title}</h1>
       <p className="mt-6 text-xl leading-8 text-muted">{post.summary}</p>
       {post.tags.length > 0 ? (
         <ul aria-label="Tags" className="mt-6 flex flex-wrap gap-2">

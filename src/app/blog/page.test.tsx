@@ -25,7 +25,7 @@ describe("blog index", () => {
     expect(screen.getByRole("link", { name: "Newer Post" })).toHaveAttribute("href", "/blog/newer");
     expect(screen.getByText("Sep 1, 2026")).toHaveAttribute("datetime", "2026-09-01");
     expect(screen.getByText(/4 min read/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /RSS/ })).toHaveAttribute("href", "/feed.xml");
+    expect(screen.getByRole("link", { name: /RSS/ })).toHaveAttribute("href", "/rss");
   });
 
   it("offers a tag filter built from the posts and filters by the chosen tag", async () => {

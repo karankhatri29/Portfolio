@@ -33,10 +33,10 @@ export default async function BlogIndexPage({ searchParams }: { searchParams: Pr
         }}
       />
       <JsonLd data={breadcrumbs([{ name: "Writing", path: "/blog" }])} />
-      <Link href="/" className="text-sm font-semibold text-accent underline underline-offset-4">Home</Link>
-      <p className="mt-8 text-sm font-semibold uppercase tracking-[0.2em] text-accent">Writing and research</p>
-      <h1 className="mt-4 font-display text-5xl font-semibold tracking-tight sm:text-7xl">Writing and research</h1>
-      <p className="mt-6 text-sm text-muted"><a href="/feed.xml" className="underline underline-offset-4 hover:text-accent">Subscribe with RSS</a></p>
+      <Link href="/" className="inline-flex min-h-11 items-center text-sm font-semibold text-accent underline underline-offset-4">Home</Link>
+      <p className="mt-8 text-sm font-medium text-accent">Notes from the work</p>
+      <h1 className="mt-3 font-display text-4xl font-semibold tracking-tight sm:text-6xl">Writing and research</h1>
+      <p className="mt-6 text-sm text-muted"><Link href="/rss" className="underline underline-offset-4 hover:text-accent">Subscribe with RSS</Link></p>
 
       {tags.length > 0 ? (
         <nav aria-label="Filter by tag" className="mt-8 flex flex-wrap gap-2">
@@ -47,12 +47,12 @@ export default async function BlogIndexPage({ searchParams }: { searchParams: Pr
         </nav>
       ) : null}
 
-      <div className="mt-14 space-y-8">
+      <div className="mt-12 grid gap-5">
         {posts.length === 0 ? <p className="text-muted">{tag ? `No posts tagged "${tag}" yet.` : "New writing is on the way."}</p> : null}
         {posts.map((post) => (
-          <article key={post.slug} className="border-t border-ink/10 pt-6">
+          <article key={post.slug} className="group relative border border-accent/20 bg-ink/[0.035] p-6 backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:border-accent/60 hover:shadow-[0_0_44px_-12px_rgb(var(--color-accent)/0.5)] motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:p-8">
             <p className="text-sm text-muted"><time dateTime={post.date}>{formatPostDate(post.date)}</time> · {post.readingMinutes} min read</p>
-            <h2 className="mt-2 font-display text-3xl font-semibold"><Link href={`/blog/${post.slug}`} className="hover:text-accent">{post.title}</Link></h2>
+            <h2 className="mt-3 font-display text-2xl font-semibold leading-tight tracking-tight sm:text-3xl"><Link href={`/blog/${post.slug}`} className="after:absolute after:inset-0 hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">{post.title}</Link></h2>
             <p className="mt-3 leading-7 text-muted">{post.summary}</p>
             {post.tags.length > 0 ? <ul aria-label={`Tags for ${post.title}`} className="mt-3 flex flex-wrap gap-2">{post.tags.map((item) => <li key={item} className="rounded-full border border-ink/15 px-3 py-0.5 text-xs text-muted">{item}</li>)}</ul> : null}
           </article>
