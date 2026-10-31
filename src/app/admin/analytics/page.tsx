@@ -4,7 +4,7 @@ import { auth } from "@/auth";
 import { AdminGate } from "@/components/AdminGate";
 import { AdminShell } from "@/components/AdminShell";
 import { Dashboard, RANGES } from "@/components/analytics/Dashboard";
-import { getDashboardData } from "@/lib/analytics/repository";
+import { countHealEvents, getDashboardData } from "@/lib/analytics/repository";
 import { listBlogPosts } from "@/lib/content/blog";
 
 const DEFAULT_RANGE = 30;
@@ -22,11 +22,11 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
   const session = await auth();
   const days = readDays((await searchParams).days);
   const isAdmin = session?.role === "Admin";
-  const [data, posts] = isAdmin ? await Promise.all([getDashboardData(days), listBlogPosts().catch(() => [])]) : [null, []];
+  const [data, posts, healed] = isAdmin ? await Promise.all([getDashboardData(days), listBlogPosts().catch(() => []), countHealEvents(days).catch(() => [])]) : [null, [], []];
 
   return (
     <AdminShell current="analytics" title="Analytics" description="Who visits, where they come from, and what they do." signedIn={isAdmin} wide>
-      <AdminGate session={session}>{data ? <Dashboard data={data} posts={posts} days={days} now={new Date()} /> : null}</AdminGate>
+      <AdminGate session={session}>{data ? <Dashboard data={data} posts={posts} healed={healed} days={days} now={new Date()} /> : null}</AdminGate>
     </AdminShell>
   );
 }

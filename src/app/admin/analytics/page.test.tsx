@@ -1,13 +1,13 @@
-import { render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 
 import { auth } from "@/auth";
-import { getDashboardData } from "@/lib/analytics/repository";
+import { countHealEvents, getDashboardData } from "@/lib/analytics/repository";
 import type { DashboardData } from "@/lib/analytics/repository";
 
 import AnalyticsPage from "./page";
 
 jest.mock("@/auth", () => ({ auth: jest.fn() }));
-jest.mock("@/lib/analytics/repository", () => ({ getDashboardData: jest.fn() }));
+jest.mock("@/lib/analytics/repository", () => ({ getDashboardData: jest.fn(), countHealEvents: jest.fn() }));
 jest.mock("@/lib/content/blog", () => ({
   listBlogPosts: async () => [
     { slug: "quiet-post", title: "Quiet Post", date: "2026-01-01", summary: "" },
@@ -19,6 +19,7 @@ jest.mock("@/components/analytics/MessageInbox", () => ({ MessageInbox: ({ initi
 
 const mockAuth = auth as unknown as jest.Mock;
 const mockData = jest.mocked(getDashboardData);
+const mockHealed = jest.mocked(countHealEvents);
 
 const data: DashboardData = {
   days: 30,
@@ -55,9 +56,34 @@ async function renderPage(days?: string) {
 
 beforeEach(() => {
   mockData.mockResolvedValue(data);
+  mockHealed.mockResolvedValue([]);
 });
 
 describe("analytics dashboard page", () => {
+  it("says how often the site recovered by itself, for the selected range, and hides the line when it did not need to", async () => {
+    mockAuth.mockResolvedValue({ role: "Admin", user: {} });
+    mockHealed.mockResolvedValue([{ dependency: "database", action: "retried", count: 4 }, { dependency: "gemini", action: "fallback-answer", count: 1 }, { dependency: "database", action: "served-last-good", count: 1 }]);
+
+    await renderPage();
+    expect(mockHealed).toHaveBeenCalledWith(30);
+    expect(screen.getByText(/Recovered automatically: 6 times \(database 5, gemini 1\)/)).toBeInTheDocument();
+    cleanup();
+
+    mockHealed.mockResolvedValue([]);
+    await renderPage();
+    expect(screen.queryByText(/Recovered automatically/)).not.toBeInTheDocument();
+  });
+
+  it("still shows the dashboard when the recovery count cannot be read", async () => {
+    mockAuth.mockResolvedValue({ role: "Admin", user: {} });
+    mockHealed.mockRejectedValue(new Error("no heal_events table"));
+
+    await renderPage();
+
+    expect(screen.getByRole("region", { name: "Summary" })).toBeInTheDocument();
+    expect(screen.queryByText(/Recovered automatically/)).not.toBeInTheDocument();
+  });
+
   it("shows the summary, sources, blog performance and outreach for the Admin", async () => {
     mockAuth.mockResolvedValue({ role: "Admin", user: {} });
 

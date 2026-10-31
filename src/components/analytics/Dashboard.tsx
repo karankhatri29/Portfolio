@@ -8,7 +8,7 @@ import { MessageInbox } from "@/components/analytics/MessageInbox";
 import { StatCard } from "@/components/analytics/StatCard";
 import { TrafficChart } from "@/components/analytics/TrafficChart";
 import { countryName, formatDuration, percentOf, plural, timeAgo } from "@/lib/analytics/format";
-import type { DashboardData } from "@/lib/analytics/repository";
+import type { DashboardData, HealCount } from "@/lib/analytics/repository";
 import { groupSources, percentChange } from "@/lib/analytics/tracking";
 
 export const RANGES = [7, 30, 90];
@@ -22,7 +22,7 @@ function pageLabel(path: string) {
 // Every block of the dashboard sits in the same frosted card.
 const card = "border border-accent/20 bg-ink/[0.035] p-6 backdrop-blur-xl sm:p-8";
 
-export function Dashboard({ data, posts: blogPosts, days, now }: { data: DashboardData; posts: { slug: string; title: string }[]; days: number; now: Date }) {
+export function Dashboard({ data, posts: blogPosts, healed = [], days, now }: { data: DashboardData; posts: { slug: string; title: string }[]; healed?: HealCount[]; days: number; now: Date }) {
   const { summary } = data;
   const blogViews = new Map(data.blog.map((row) => [row.path, row]));
   const engagement = new Map(data.engagement.map((row) => [row.path, row]));
@@ -32,6 +32,9 @@ export function Dashboard({ data, posts: blogPosts, days, now }: { data: Dashboa
       return { title: post.title, slug: post.slug, views: stat?.views ?? 0, visitors: stat?.visitors ?? 0, previous: stat?.previousViews ?? 0, reading: engagement.get(`/blog/${post.slug}`) };
     })
     .sort((a, b) => b.views - a.views);
+  const healedTotal = healed.reduce((sum, item) => sum + item.count, 0);
+  const healedBy = new Map<string, number>();
+  for (const item of healed) healedBy.set(item.dependency, (healedBy.get(item.dependency) ?? 0) + item.count);
   const totalContactClicks = data.contactClicks.reduce((sum, row) => sum + row.clicks, 0);
 
   return (
@@ -59,6 +62,12 @@ export function Dashboard({ data, posts: blogPosts, days, now }: { data: Dashboa
         <StatCard label="Contact clicks" value={summary.contactClicks} previous={summary.previous.contactClicks} days={days} />
         <StatCard label="Messages" value={summary.messages} previous={summary.previous.messages} days={days} />
       </section>
+
+      {healedTotal > 0 ? (
+        <p className="text-sm text-muted">
+          Recovered automatically: {plural(healedTotal, "time")} ({[...healedBy].map(([name, count]) => `${name} ${count}`).join(", ")}) in the last {days} days
+        </p>
+      ) : null}
 
       <section aria-labelledby="traffic-title" className={card}>
         <h2 id="traffic-title" className="font-display text-2xl font-semibold tracking-tight">Traffic</h2>
