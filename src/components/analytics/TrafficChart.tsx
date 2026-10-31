@@ -16,6 +16,18 @@ function shortDate(day: string) {
   return new Date(`${day}T00:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 }
 
+// A smooth line through the points: each step curves with level tangents, so it never swings past a real value.
+function smooth(points: { x: number; y: number }[]) {
+  return points
+    .map((point, index) => {
+      if (index === 0) return `M${point.x.toFixed(1)} ${point.y.toFixed(1)}`;
+      const before = points[index - 1];
+      const middle = ((before.x + point.x) / 2).toFixed(1);
+      return `C${middle} ${before.y.toFixed(1)} ${middle} ${point.y.toFixed(1)} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`;
+    })
+    .join(" ");
+}
+
 export function TrafficChart({ data }: { data: DailyPoint[] }) {
   const total = data.reduce((sum, point) => sum + point.views, 0);
   if (data.length === 0 || total === 0) {
@@ -27,7 +39,7 @@ export function TrafficChart({ data }: { data: DailyPoint[] }) {
   const innerHeight = HEIGHT - PAD.top - PAD.bottom;
   const x = (index: number) => PAD.left + (data.length === 1 ? innerWidth / 2 : (index / (data.length - 1)) * innerWidth);
   const y = (value: number) => PAD.top + innerHeight - (value / max) * innerHeight;
-  const line = (key: "views" | "visitors") => data.map((point, index) => `${index === 0 ? "M" : "L"}${x(index).toFixed(1)} ${y(point[key]).toFixed(1)}`).join(" ");
+  const line = (key: "views" | "visitors") => smooth(data.map((point, index) => ({ x: x(index), y: y(point[key]) })));
   const area = `${line("views")} L${x(data.length - 1).toFixed(1)} ${y(0)} L${x(0).toFixed(1)} ${y(0)} Z`;
   const ticks = [0, max / 2, max];
   const labelIndexes = [...new Set([0, Math.floor((data.length - 1) / 2), data.length - 1])];
@@ -35,15 +47,22 @@ export function TrafficChart({ data }: { data: DailyPoint[] }) {
   return (
     <figure className="mt-4">
       <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label={`Daily page views and unique visitors, ${shortDate(data[0].day)} to ${shortDate(data[data.length - 1].day)}`} className="h-auto w-full text-accent">
+        <defs>
+          <linearGradient id="traffic-fill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="currentColor" stopOpacity="0.35" />
+            <stop offset="1" stopColor="currentColor" stopOpacity="0" />
+          </linearGradient>
+        </defs>
         {ticks.map((tick) => (
           <g key={tick}>
-            <line x1={PAD.left} x2={WIDTH - PAD.right} y1={y(tick)} y2={y(tick)} stroke="currentColor" strokeOpacity="0.12" />
+            <line x1={PAD.left} x2={WIDTH - PAD.right} y1={y(tick)} y2={y(tick)} stroke="currentColor" strokeOpacity="0.14" strokeDasharray="2 5" />
             <text x={PAD.left - 6} y={y(tick) + 4} textAnchor="end" fontSize="11" fill="currentColor" fillOpacity="0.7">{tick}</text>
           </g>
         ))}
-        <path d={area} fill="currentColor" fillOpacity="0.1" />
-        <path d={line("views")} fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+        <path d={area} fill="url(#traffic-fill)" />
+        <path d={line("views")} fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinejoin="round" strokeLinecap="round" style={{ filter: "drop-shadow(0 0 6px currentColor)" }} />
         <path d={line("visitors")} fill="none" stroke="currentColor" strokeOpacity="0.55" strokeWidth="2" strokeDasharray="5 4" strokeLinejoin="round" />
+        <circle cx={x(data.length - 1)} cy={y(data[data.length - 1].views)} r="4" fill="currentColor" style={{ filter: "drop-shadow(0 0 6px currentColor)" }} />
         {labelIndexes.map((index) => (
           <text key={index} x={x(index)} y={HEIGHT - 8} textAnchor={index === 0 ? "start" : index === data.length - 1 ? "end" : "middle"} fontSize="11" fill="currentColor" fillOpacity="0.7">{shortDate(data[index].day)}</text>
         ))}

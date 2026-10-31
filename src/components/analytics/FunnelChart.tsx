@@ -20,8 +20,8 @@ export function FunnelChart({ funnel }: { funnel: Funnel }) {
               <span className="font-medium">{index + 1}. {step.label}</span>
               <span className="shrink-0 tabular-nums text-muted">{step.value.toLocaleString("en-US")}{index > 0 ? ` · ${share}% of visitors` : ""}</span>
             </div>
-            <div className="mt-1 h-3 bg-ink/10" aria-hidden="true">
-              <div className="h-3 bg-accent" style={{ width: `${step.value === 0 ? 0 : Math.max(share, 2)}%` }} />
+            <div className="mt-1.5 h-3 rounded-full bg-ink/10" aria-hidden="true">
+              <div className="h-3 rounded-full bg-gradient-to-r from-accent/60 to-accent shadow-[0_0_14px_-2px_rgb(var(--color-accent)/0.7)]" style={{ width: `${step.value === 0 ? 0 : Math.max(share, 2)}%` }} />
             </div>
           </li>
         );

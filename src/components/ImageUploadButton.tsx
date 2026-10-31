@@ -35,10 +35,10 @@ export function ImageUploadButton({ onUploaded, label = "Upload image" }: { onUp
   return (
     <div className="flex flex-wrap items-center gap-3">
       <input ref={input} type="file" accept="image/png,image/jpeg,image/gif,image/webp" className="sr-only" aria-label={label} tabIndex={-1} onChange={handleChange} />
-      <button type="button" disabled={state.kind === "uploading"} onClick={() => input.current?.click()} className="border border-ink/30 px-3 py-1.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50">
+      <button type="button" disabled={state.kind === "uploading"} onClick={() => input.current?.click()} className="inline-flex min-h-11 items-center rounded-full border border-ink/20 px-4 text-xs font-semibold text-ink transition hover:border-accent hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-50">
         {state.kind === "uploading" ? "Uploading..." : label}
       </button>
-      {state.kind === "error" ? <p role="alert" className="text-sm text-red-700">{state.message}</p> : null}
+      {state.kind === "error" ? <p role="alert" className="text-sm text-[#ff8a80]">{state.message}</p> : null}
     </div>
   );
 }

@@ -13,7 +13,7 @@ export default async function AdminBlogPage() {
   const posts = session?.role === "Admin" ? await listPostsForAdmin() : [];
 
   return (
-    <AdminShell current="blog" title="Blog" description="Write, preview and publish posts. Drafts stay private until you publish them." signedIn={session?.role === "Admin"}>
+    <AdminShell current="blog" title="Blog" description="Write, preview and publish posts. Drafts stay private until you publish them." signedIn={session?.role === "Admin"} wide>
       <AdminGate session={session}>
         <BlogEditor initialPosts={posts} />
       </AdminGate>
