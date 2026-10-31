@@ -1,6 +1,6 @@
 export type ErrorReport = { source: "client" | "server"; message: string; stack: string; path: string; digest: string };
 
-const IGNORED_MESSAGES = [/ResizeObserver loop/i, /^Script error\.?$/i, /AbortError/i, /operation was aborted/i];
+const IGNORED_MESSAGES = [/ResizeObserver loop/i, /^Script error\.?$/i, /AbortError/i, /operation was aborted/i, /Java object is gone/i, /destination stream closed early/i];
 
 function clip(value: unknown, max: number): string {
   return typeof value === "string" ? value.trim().slice(0, max) : "";

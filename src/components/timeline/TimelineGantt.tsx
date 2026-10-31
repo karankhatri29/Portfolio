@@ -12,7 +12,7 @@ const ROW_HEIGHT = "h-16";
 function DetailCard({ entry }: { entry: GanttEntry }) {
   const { item } = entry;
   return (
-    <article className="timeline-fade border border-ink/10 p-6">
+    <article className="timeline-fade border border-accent/20 bg-ink/[0.04] p-6 shadow-[0_0_40px_-16px_rgb(var(--color-accent)/0.5)] backdrop-blur-xl">
       <p className="text-sm font-semibold text-accent">{item.year}</p>
       <h3 className="mt-2 font-display text-2xl font-semibold">{item.organization}</h3>
       <p className="mt-1 text-sm text-muted">{item.title}</p>
@@ -33,6 +33,8 @@ export function TimelineGantt({ items, now }: { items: TimelineItem[]; now?: Dat
   const [at, setAt] = useState<number | null>(null);
   const [focusKey, setFocusKey] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
+  // While dragging, the playhead follows the pointer smoothly; the selected month (for the cards) still snaps.
+  const [pos, setPos] = useState<number | null>(null);
 
   if (!gantt) return null;
   const { entries, first, last, total } = gantt;
@@ -41,11 +43,18 @@ export function TimelineGantt({ items, now }: { items: TimelineItem[]; now?: Dat
 
   const active = activeAt(entries, month).sort((a, b) => Number(b.key === focusKey) - Number(a.key === focusKey));
   const gap = active.length === 0 ? neighbours(entries, month) : null;
+  const playheadAt = dragging && pos !== null ? pos : month - first + 0.5;
 
   const monthFromX = (clientX: number) => {
     const rect = chart.current?.getBoundingClientRect();
     if (!rect || rect.width <= 0) return month;
     return first + Math.floor(Math.min(0.999999, Math.max(0, (clientX - rect.left) / rect.width)) * total);
+  };
+
+  const positionFromX = (clientX: number) => {
+    const rect = chart.current?.getBoundingClientRect();
+    if (!rect || rect.width <= 0) return null;
+    return Math.min(1, Math.max(0, (clientX - rect.left) / rect.width)) * total;
   };
 
   function onPointerDown(event: PointerEvent<HTMLDivElement>) {
@@ -55,16 +64,20 @@ export function TimelineGantt({ items, now }: { items: TimelineItem[]; now?: Dat
     setFocusKey(null);
     event.currentTarget.setPointerCapture?.(event.pointerId);
     setAt(monthFromX(event.clientX));
+    setPos(positionFromX(event.clientX));
   }
 
   function onPointerMove(event: PointerEvent<HTMLDivElement>) {
-    if (drag.current) setAt(monthFromX(event.clientX));
+    if (!drag.current) return;
+    setAt(monthFromX(event.clientX));
+    setPos(positionFromX(event.clientX));
   }
 
   function endDrag(event: PointerEvent<HTMLDivElement>) {
     if (!drag.current) return;
     drag.current = false;
     setDragging(false);
+    setPos(null);
     event.currentTarget.releasePointerCapture?.(event.pointerId);
   }
 
@@ -87,7 +100,7 @@ export function TimelineGantt({ items, now }: { items: TimelineItem[]; now?: Dat
 
   return (
     <div>
-      <div className="mt-12 flex">
+      <div className="mt-12 flex pr-10">
         <div aria-hidden="true" className="w-56 shrink-0 pr-6 xl:w-72">
           <div className="h-16" />
           {entries.map((entry) => (
@@ -105,14 +118,14 @@ export function TimelineGantt({ items, now }: { items: TimelineItem[]; now?: Dat
           onPointerUp={endDrag}
           onPointerCancel={endDrag}
           data-testid="timeline-chart"
-          className="relative min-w-0 flex-1 touch-pan-y select-none"
+          className="relative min-w-0 flex-1 touch-pan-y select-none bg-ink/[0.025] ring-1 ring-ink/10"
         >
           {/* Month grid and labels */}
           <div aria-hidden="true" className="absolute inset-0 flex">
             {Array.from({ length: total }, (_, index) => {
               const value = first + index;
               return (
-                <div key={value} className={`relative flex-1 border-l ${isJanuary(value) ? "border-ink/25" : "border-ink/[0.07]"}`}>
+                <div key={value} className={`relative flex-1 border-l ${isJanuary(value) ? "border-ink/20" : "border-ink/[0.05]"}`}>
                   <div className="absolute inset-x-0 top-1 text-center text-[11px] leading-4 text-muted">
                     <span className="block">{monthName(value)}</span>
                     {index === 0 || isJanuary(value) ? <span className="block font-semibold text-ink">{Math.floor(value / 12)}</span> : null}
@@ -122,12 +135,17 @@ export function TimelineGantt({ items, now }: { items: TimelineItem[]; now?: Dat
             })}
           </div>
 
+          <div
+            aria-hidden="true"
+            className={`absolute inset-y-0 bg-gradient-to-b from-accent/[0.14] to-accent/0 ${dragging ? "" : "transition-[left] duration-500 ease-[cubic-bezier(0.2,0.8,0.2,1)] motion-reduce:transition-none"}`}
+            style={{ left: pct(month - first), width: pct(1) }}
+          />
           <div className="relative h-16" />
           <ul className="relative">
             {entries.map((entry) => {
               const isActive = active.includes(entry);
               return (
-                <li key={entry.key} className={`relative ${ROW_HEIGHT}`}>
+                <li key={entry.key} className={`relative border-t border-ink/[0.05] ${ROW_HEIGHT}`}>
                   <button
                     type="button"
                     data-bar
@@ -136,27 +154,28 @@ export function TimelineGantt({ items, now }: { items: TimelineItem[]; now?: Dat
                     aria-label={`${entry.item.organization}, ${entry.item.title}, ${entry.item.year}`}
                     title={`${entry.item.organization} · ${entry.item.year}`}
                     style={{ left: pct(entry.start - first), width: pct(entry.months) }}
-                    className={`absolute top-4 flex h-8 items-center justify-between overflow-visible whitespace-nowrap rounded-full px-3 text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper ${isActive ? "bg-accent text-paper" : "bg-ink/15 text-muted hover:bg-ink/25 hover:text-ink"}`}
+                    className={`group absolute top-4 flex h-8 items-center justify-between overflow-visible whitespace-nowrap rounded-full px-4 text-xs font-semibold transition-all duration-500 ease-out motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper ${isActive ? "bg-gradient-to-r from-accent/80 via-accent to-accent/85 text-paper shadow-[0_0_30px_-6px_rgb(var(--color-accent)/0.85)]" : "border border-ink/15 bg-ink/[0.06] text-muted hover:border-accent/50 hover:bg-ink/10 hover:text-ink"}`}
                   >
+                    <span aria-hidden="true" className={`absolute left-0 top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border transition-colors duration-500 ${isActive ? "border-paper bg-accent shadow-[0_0_10px_2px_rgb(var(--color-accent)/0.8)]" : "border-accent/50 bg-paper"}`} />
                     <span>{entry.months} mo</span>
                     {entry.ongoing ? (
                       <span className="flex items-center gap-1.5">
                         <span>now</span>
                         <span aria-hidden="true" className="h-2 w-2 rounded-full bg-paper motion-safe:animate-pulse" />
                       </span>
-                    ) : null}
+                    ) : <span aria-hidden="true" className={`absolute right-0 top-1/2 h-2.5 w-2.5 -translate-y-1/2 translate-x-1/2 rounded-full border transition-colors duration-500 ${isActive ? "border-paper bg-accent shadow-[0_0_10px_2px_rgb(var(--color-accent)/0.8)]" : "border-accent/50 bg-paper"}`} />}
                   </button>
                 </li>
               );
             })}
           </ul>
 
-          {/* Playhead */}
+          {/* Playhead: follows the pointer while dragging, then glides to its month */}
           <div
-            className={`pointer-events-none absolute inset-y-0 z-10 w-0 ${dragging ? "" : "transition-[left] duration-200 ease-out"}`}
-            style={{ left: pct(month - first + 0.5) }}
+            className={`pointer-events-none absolute inset-y-0 z-10 w-0 transition-[left] ${dragging ? "duration-100 ease-out" : "duration-500 ease-[cubic-bezier(0.2,0.8,0.2,1)] motion-reduce:duration-0"}`}
+            style={{ left: pct(playheadAt) }}
           >
-            <div aria-hidden="true" className="absolute bottom-0 left-0 top-16 w-px -translate-x-1/2 bg-accent" />
+            <div aria-hidden="true" className="absolute bottom-0 left-0 top-16 w-px -translate-x-1/2 bg-gradient-to-b from-accent via-accent/70 to-accent/0 shadow-[0_0_14px_1px_rgb(var(--color-accent)/0.6)]" />
             <div
               role="slider"
               tabIndex={0}
@@ -167,7 +186,7 @@ export function TimelineGantt({ items, now }: { items: TimelineItem[]; now?: Dat
               aria-valuenow={month}
               aria-valuetext={formatMonth(month, true)}
               onKeyDown={onKeyDown}
-              className={`pointer-events-auto absolute left-0 top-9 -translate-x-1/2 whitespace-nowrap rounded-full bg-accent px-3 py-1 text-xs font-semibold text-paper shadow-lg shadow-black/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-paper ${dragging ? "cursor-grabbing" : "cursor-grab"}`}
+              className={`pointer-events-auto absolute left-0 top-9 -translate-x-1/2 whitespace-nowrap rounded-full bg-accent px-3.5 py-1 text-xs font-semibold text-paper shadow-[0_0_26px_-2px_rgb(var(--color-accent)/0.85)] transition-transform duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-paper ${dragging ? "scale-110 cursor-grabbing" : "cursor-grab hover:scale-105"}`}
             >
               {formatMonth(month)}
             </div>

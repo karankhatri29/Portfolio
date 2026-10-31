@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BrandMark } from "@/components/BrandMark";
 import type { CSSProperties } from "react";
 
 import { ContactForm } from "@/components/ContactForm";
@@ -15,7 +16,6 @@ const glyphs: Record<Icon, string> = {
 
 // Brand colour applied on hover; GitHub stays neutral so it works in both themes.
 const brand: Record<Icon, string> = { email: "#EA4335", github: "rgb(var(--color-ink))", linkedin: "#0A66C2" };
-const channel: Record<Icon, string> = { email: "Email", github: "GitHub", linkedin: "LinkedIn" };
 
 function ContactIcon({ name }: { name: Icon }) {
   return <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6 shrink-0"><path d={glyphs[name]} /></svg>;
@@ -38,7 +38,7 @@ export function ContactFooter({ links, name }: { links: ContactLink[]; name?: st
         {email ? <a href={email.href} data-track="email" className="mt-8 inline-flex items-center gap-3 rounded-full bg-accent px-7 py-3 text-sm font-semibold text-paper transition hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper">Say hello<span aria-hidden="true">→</span></a> : null}
       </div>
 
-      <nav aria-label="Contact links" className="mx-auto mt-14 grid max-w-5xl gap-4 sm:grid-cols-3">
+      <nav aria-label="Contact links" className="mt-12 flex flex-wrap justify-center gap-4">
         {links.map((link) => {
           const external = link.href.startsWith("http");
           return (
@@ -46,17 +46,13 @@ export function ContactFooter({ links, name }: { links: ContactLink[]; name?: st
               key={link.href}
               href={link.href}
               aria-label={link.label}
+              title={display(link)}
               data-track={link.icon}
               {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
               style={{ "--brand": brand[link.icon] } as CSSProperties}
-              className="group flex min-w-0 items-center gap-4 border border-ink/10 p-5 transition hover:-translate-y-0.5 hover:border-[color:var(--brand)] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="group flex h-16 w-16 items-center justify-center rounded-full border border-accent/20 bg-ink/[0.035] text-ink backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:border-[color:var(--brand)] hover:text-[color:var(--brand)] hover:shadow-[0_0_36px_-8px_var(--brand)] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent motion-reduce:transition-none motion-reduce:hover:translate-y-0"
             >
-              <span className="text-ink transition-colors group-hover:text-[color:var(--brand)]"><ContactIcon name={link.icon} /></span>
-              <span className="min-w-0">
-                <span className="block text-xs font-semibold uppercase tracking-[0.16em] text-muted">{channel[link.icon]}</span>
-                <span className="mt-1 block truncate text-sm font-medium">{display(link)}</span>
-              </span>
-              {external ? <span aria-hidden="true" className="ml-auto text-muted transition group-hover:text-[color:var(--brand)]">↗</span> : null}
+              <ContactIcon name={link.icon} />
             </a>
           );
         })}
@@ -68,7 +64,8 @@ export function ContactFooter({ links, name }: { links: ContactLink[]; name?: st
         <div className="mt-6"><ContactForm /></div>
       </div>
 
-      <p className="mt-16 text-center text-xs text-muted">© {new Date().getFullYear()} {name ?? ""} · <Link href="/privacy" className="underline underline-offset-4 hover:text-accent">Privacy</Link> · <a href="/feed.xml" className="underline underline-offset-4 hover:text-accent">RSS</a></p>
+      <div className="mt-16 flex justify-center"><BrandMark size={72} title={name ?? "Logo"} /></div>
+      <p className="mt-4 text-center text-xs text-muted">© {new Date().getFullYear()} {name ?? ""} · <Link href="/privacy" className="underline underline-offset-4 hover:text-accent">Privacy</Link> · <Link href="/rss" title="How to follow by RSS" className="underline underline-offset-4 hover:text-accent">RSS</Link></p>
     </footer>
   );
 }

@@ -15,6 +15,12 @@ const buttonClass = "border border-ink/20 px-3 py-1 text-xs font-semibold focus:
 
 export function MessageInbox({ initialMessages }: { initialMessages: ContactMessage[] }) {
   const [messages, setMessages] = useState(initialMessages);
+  const [seenInitial, setSeenInitial] = useState(initialMessages);
+  // A dashboard refresh delivers new server data; adopt it (this replaces any unsaved local status change).
+  if (seenInitial !== initialMessages) {
+    setSeenInitial(initialMessages);
+    setMessages(initialMessages);
+  }
   const [filter, setFilter] = useState<MessageStatus | "all">("all");
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);

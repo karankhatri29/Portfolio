@@ -5,8 +5,11 @@ export type OutputLine = { kind: "text"; text: string } | { kind: "link"; text: 
 export type TerminalContext = {
   name: string;
   focus: TerminalLine[];
-  skills: { name: string; tools: string[] }[];
-  projects: { title: string; year: string; href?: string }[];
+  /** The about text, so whoami can say who Karan is instead of repeating the hero. */
+  about?: { introduction: string; detail?: string };
+  availability?: string;
+  skills: { name: string; tools: string[]; description?: string }[];
+  projects: { title: string; year: string; href?: string; role?: string; summary?: string }[];
   contacts: { label: string; text: string; href: string }[];
 };
 
@@ -32,6 +35,40 @@ const HELP: OutputLine[] = [
   text("Or just type a question about his work."),
 ];
 
+// "cat focus.txt" -> "Focus", "now" -> "Now": the label a focus line gets when whoami prints it.
+function focusLabel(command: string) {
+  const name = command.replace(/^cat\s+/, "").replace(/\.\w+$/, "").trim();
+  return name ? name[0].toUpperCase() + name.slice(1) : "";
+}
+
+function whoami(context: TerminalContext): OutputLine[] {
+  const { about, availability } = context;
+  if (!about) return [text(context.name), ...context.focus.map((line) => text(line.output))];
+
+  return [
+    text(about.introduction),
+    ...(about.detail ? [text(about.detail)] : []),
+    ...context.focus.filter((line) => line.output !== context.name).map((line) => text(`${focusLabel(line.command)}: ${line.output}`)),
+    ...(availability ? [text(`Availability: ${availability}`)] : []),
+  ];
+}
+
+// Each project is a link, then one dim line with the role and what it is or achieved.
+function projectLines(context: TerminalContext): OutputLine[] {
+  if (!context.projects.length) return [text("No projects listed yet.")];
+  return context.projects.flatMap((project): OutputLine[] => {
+    const title = `${project.title} (${project.year})`;
+    const detail = [project.role, project.summary].filter(Boolean).join(" · ");
+    return [project.href ? { kind: "link", text: title, href: project.href } : text(title), ...(detail ? [text(`  ${detail}`)] : [])];
+  });
+}
+
+function contactLines(context: TerminalContext): OutputLine[] {
+  if (!context.contacts.length) return [text("Use the contact section at the bottom of the page.")];
+  const links = context.contacts.map((contact): OutputLine => ({ kind: "link", text: `${contact.label}: ${contact.text}`, href: contact.href }));
+  return context.contacts.some((contact) => contact.label === "Email") ? [text("Email is the quickest way to reach him."), ...links] : links;
+}
+
 /**
  * Decides what a line typed into the terminal does. Built-in commands answer instantly from the
  * page's own data (no model call, no cost); anything else is a question for the assistant.
@@ -55,23 +92,23 @@ export function runCommand(raw: string, context: TerminalContext): CommandResult
     case "close":
       return { type: "close" };
     case "whoami":
-      return { type: "output", lines: [text(context.name), ...context.focus.map((line) => text(line.output))] };
+      return { type: "output", lines: whoami(context) };
     case "skills":
       return context.skills.length
-        ? { type: "output", lines: context.skills.map((skill) => text(`${skill.name}${skill.tools.length ? `: ${skill.tools.join(", ")}` : ""}`)) }
+        ? {
+            type: "output",
+            lines: context.skills.flatMap((skill): OutputLine[] => [
+              text(`${skill.name}${skill.tools.length ? `: ${skill.tools.join(", ")}` : ""}`),
+              ...(skill.description ? [text(`  ${skill.description}`)] : []),
+            ]),
+          }
         : { type: "output", lines: [text("The skills graph on this page has the full picture.")] };
     case "projects":
     case "ls":
-      return {
-        type: "output",
-        lines: context.projects.length ? context.projects.map((project): OutputLine => (project.href ? { kind: "link", text: `${project.title} (${project.year})`, href: project.href } : text(`${project.title} (${project.year})`))) : [text("No projects listed yet.")],
-      };
+      return { type: "output", lines: projectLines(context) };
     case "contact":
     case "email":
-      return {
-        type: "output",
-        lines: context.contacts.length ? context.contacts.map((contact): OutputLine => ({ kind: "link", text: `${contact.label}: ${contact.text}`, href: contact.href })) : [text("Use the contact section at the bottom of the page.")],
-      };
+      return { type: "output", lines: contactLines(context) };
     case "sudo":
       return {
         type: "output",

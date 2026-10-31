@@ -1,5 +1,5 @@
 import { portfolioContent } from "@/data/portfolio";
-import { DEFAULT_MODEL, askGemini } from "@/lib/ask/gemini";
+import { DEFAULT_FALLBACK_MODEL, DEFAULT_MODEL, askGemini } from "@/lib/ask/gemini";
 import { buildKnowledge, contactEmail } from "@/lib/ask/knowledge";
 import { DEFAULT_DAILY_LIMIT, DEFAULT_HOURLY_LIMIT, LIMIT_MESSAGES, limitHit, readLimit } from "@/lib/ask/limits";
 import { REFUSAL, buildSystemPrompt, cleanAnswer, validateQuestion } from "@/lib/ask/prompt";
@@ -162,6 +162,92 @@ describe("askGemini", () => {
     const failing = jest.fn().mockRejectedValue(Object.assign(new Error("boom test-key"), { name: "AbortError" }));
     expect(await askGemini({ ...base, fetchImpl: failing })).toEqual({ ok: false, reason: "unavailable" });
     expect(JSON.stringify((console.error as jest.Mock).mock.calls)).not.toContain("test-key");
+  });
+
+  it("cleans a key pasted with a newline, spaces or wrapping quotes before using it in the header", async () => {
+    for (const messy of ["test-key\n", "  test-key  ", '"test-key"', "'test-key'\r\n"]) {
+      const fetchImpl = ok(reply("Fine."));
+      await askGemini({ ...base, apiKey: messy, fetchImpl });
+      expect(fetchImpl.mock.calls[0][1].headers["x-goog-api-key"]).toBe("test-key");
+    }
+  });
+
+  it("treats a key that is only whitespace or quotes as not configured", async () => {
+    const fetchImpl = ok(reply("x"));
+
+    expect(await askGemini({ ...base, apiKey: ' "" \n', fetchImpl })).toEqual({ ok: false, reason: "not-configured" });
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("logs the error type, network code and a redacted message so a live failure can be diagnosed", async () => {
+    const failing = jest.fn().mockRejectedValue(Object.assign(new TypeError("fetch failed for key test-key"), { cause: { code: "ENOTFOUND" } }));
+
+    expect(await askGemini({ ...base, fetchImpl: failing })).toEqual({ ok: false, reason: "unavailable" });
+
+    const logged = JSON.stringify((console.error as jest.Mock).mock.calls);
+    expect(logged).toContain("TypeError");
+    expect(logged).toContain("ENOTFOUND");
+    expect(logged).toContain("fetch failed for key [redacted]");
+    expect(logged).not.toContain("test-key");
+  });
+
+  describe("fallback model", () => {
+    const urls = (fetchImpl: jest.Mock) => fetchImpl.mock.calls.map(([url]) => String(url).split("/models/")[1].split(":")[0]);
+    const sequence = (...responses: { status: number; body?: unknown }[]) => {
+      const fetchImpl = jest.fn();
+      for (const { status, body } of responses) fetchImpl.mockResolvedValueOnce({ ok: status >= 200 && status < 300, status, json: async () => body ?? {} });
+      return fetchImpl;
+    };
+
+    it("tries the fallback model once when the main one is down, over quota or retired", async () => {
+      for (const status of [500, 503, 404, 429]) {
+        const fetchImpl = sequence({ status }, { status: 200, body: reply("Fallback answer.") });
+
+        expect(await askGemini({ ...base, fetchImpl })).toEqual({ ok: true, text: "Fallback answer.", fallback: true });
+        expect(urls(fetchImpl)).toEqual([DEFAULT_MODEL, DEFAULT_FALLBACK_MODEL]);
+      }
+    });
+
+    it("also falls back when the request fails outright", async () => {
+      const fetchImpl = jest.fn().mockRejectedValueOnce(new TypeError("fetch failed")).mockResolvedValueOnce({ ok: true, status: 200, json: async () => reply("Still works.") });
+
+      expect(await askGemini({ ...base, fetchImpl })).toMatchObject({ ok: true, fallback: true });
+    });
+
+    it("does not spend a second call on a bad key, a block or an empty answer", async () => {
+      for (const response of [{ status: 403 }, { status: 401 }, { status: 400 }, { status: 200, body: { promptFeedback: { blockReason: "SAFETY" } } }, { status: 200, body: { candidates: [{ content: { parts: [] } }] } }]) {
+        const fetchImpl = sequence(response);
+
+        await askGemini({ ...base, fetchImpl });
+        expect(fetchImpl).toHaveBeenCalledTimes(1);
+      }
+    });
+
+    it("reports the main model's reason when both fail, and never calls a third time", async () => {
+      const fetchImpl = sequence({ status: 429 }, { status: 500 });
+
+      expect(await askGemini({ ...base, fetchImpl })).toEqual({ ok: false, reason: "quota" });
+      expect(fetchImpl).toHaveBeenCalledTimes(2);
+    });
+
+    it("can be switched off, and is skipped when it is the same model", async () => {
+      const off = sequence({ status: 500 });
+      expect(await askGemini({ ...base, fetchImpl: off, fallbackModel: null })).toEqual({ ok: false, reason: "unavailable" });
+      expect(off).toHaveBeenCalledTimes(1);
+
+      const same = sequence({ status: 500 });
+      await askGemini({ ...base, fetchImpl: same, fallbackModel: DEFAULT_MODEL });
+      expect(same).toHaveBeenCalledTimes(1);
+    });
+
+    it("sends the thinking setting each model family understands", async () => {
+      const fetchImpl = sequence({ status: 500 }, { status: 200, body: reply("ok") });
+      await askGemini({ ...base, fetchImpl });
+
+      const [primary, fallback] = fetchImpl.mock.calls.map(([, init]) => JSON.parse(init.body).generationConfig.thinkingConfig);
+      expect(primary).toEqual({ thinkingBudget: 0 });
+      expect(fallback).toEqual({ thinkingLevel: "minimal" });
+    });
   });
 
   it("cleans the model's formatting before returning it", async () => {

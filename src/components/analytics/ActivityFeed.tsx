@@ -13,10 +13,10 @@ export function ActivityFeed({ items, now }: { items: RecentActivity[]; now: Dat
   if (items.length === 0) return <p className="mt-4 text-sm text-muted">No activity recorded yet.</p>;
 
   return (
-    <ul className="mt-4 divide-y divide-ink/10 border border-ink/10">
+    <ul className="mt-4 divide-y divide-ink/10 border border-ink/10 bg-ink/[0.02]">
       {items.map((item, index) => (
         <li key={`${item.at}-${index}`} className="flex flex-wrap items-baseline justify-between gap-2 px-4 py-2 text-sm">
-          <span className={item.kind === "pageview" ? "" : "font-semibold"}>{describe(item)}</span>
+          <span className={item.kind === "pageview" ? "" : "font-semibold"}><i aria-hidden="true" className={`mr-3 inline-block h-2 w-2 rounded-full align-middle ${item.kind === "message" ? "bg-accent shadow-[0_0_10px_2px_rgb(var(--color-accent)/0.8)]" : item.kind === "click" ? "bg-accent/70" : "bg-ink/30"}`} />{describe(item)}</span>
           <span className="text-xs text-muted">
             {[item.city, item.country ? countryName(item.country) : "", item.device].filter(Boolean).map((part) => `${part} · `).join("")}
             <time dateTime={item.at}>{timeAgo(item.at, now)}</time>

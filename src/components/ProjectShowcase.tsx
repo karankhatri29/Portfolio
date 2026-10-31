@@ -18,7 +18,7 @@ const control = "flex h-11 w-11 items-center justify-center rounded-full border 
 
 const prefersReducedMotion = () => typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-export function ProjectShowcase({ projects, fallbackGithubUrl }: { projects: Project[]; fallbackGithubUrl?: string }) {
+export function ProjectShowcase({ projects, fallbackGithubUrl, id = "work" }: { projects: Project[]; fallbackGithubUrl?: string; id?: string }) {
   const regionId = useId();
   const scroller = useRef<HTMLDivElement>(null);
   const track = useRef<HTMLDivElement>(null);
@@ -103,7 +103,7 @@ export function ProjectShowcase({ projects, fallbackGithubUrl }: { projects: Pro
   const fade = edges.start && edges.end ? "" : edges.start ? "[mask-image:linear-gradient(to_right,black_90%,transparent)]" : edges.end ? "[mask-image:linear-gradient(to_right,transparent,black_8%)]" : "[mask-image:linear-gradient(to_right,transparent,black_8%,black_92%,transparent)]";
 
   return (
-    <section id="work" aria-labelledby="projects-title" className="py-16 lg:py-24">
+    <section id={id} aria-labelledby="projects-title" className="py-16 lg:py-24">
       <div className="flex items-end justify-between gap-6">
         <div>
           <h2 id="projects-title" className="font-display text-3xl font-semibold lg:text-4xl">Selected work</h2>

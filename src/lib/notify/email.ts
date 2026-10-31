@@ -10,7 +10,7 @@ export function emailConfig(): EmailConfig | null {
   return { apiKey, to, from: process.env.NOTIFY_FROM || "Portfolio <onboarding@resend.dev>" };
 }
 
-export async function sendEmail({ subject, text }: { subject: string; text: string }): Promise<EmailResult> {
+export async function sendEmail({ subject, text, replyTo }: { subject: string; text: string; replyTo?: string }): Promise<EmailResult> {
   const config = emailConfig();
   if (!config) return "skipped";
 
@@ -18,7 +18,7 @@ export async function sendEmail({ subject, text }: { subject: string; text: stri
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { authorization: `Bearer ${config.apiKey}`, "content-type": "application/json" },
-      body: JSON.stringify({ from: config.from, to: [config.to], subject: subject.replace(/[\r\n]+/g, " ").slice(0, 200), text }),
+      body: JSON.stringify({ from: config.from, to: [config.to], subject: subject.replace(/[\r\n]+/g, " ").slice(0, 200), text, ...(replyTo ? { reply_to: replyTo } : {}) }),
       signal: AbortSignal.timeout(5000),
     });
 

@@ -2,6 +2,8 @@ import { put } from "@vercel/blob";
 import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
+import { recordHeal } from "@/lib/heal";
+import { retry } from "@/lib/resilience";
 import { MAX_UPLOAD_BYTES, detectImageType, safeUploadName } from "@/lib/upload";
 
 export async function POST(request: Request) {
@@ -24,7 +26,9 @@ export async function POST(request: Request) {
     const type = detectImageType(bytes);
     if (!type) return NextResponse.json({ error: "Only PNG, JPEG, GIF and WebP images are allowed" }, { status: 415 });
 
-    const blob = await put(safeUploadName(file.name, type.ext), file, { access: "public", contentType: type.mime, addRandomSuffix: true });
+    const name = safeUploadName(file.name, type.ext);
+    // addRandomSuffix makes a repeated attempt safe: a half-finished first upload cannot collide with the second.
+    const blob = await retry(() => put(name, file, { access: "public", contentType: type.mime, addRandomSuffix: true }), { delaysMs: [500], onRecovered: () => void recordHeal("blob", "retried") });
     return NextResponse.json({ url: blob.url }, { status: 201 });
   } catch (error) {
     console.error("upload route failed", error);

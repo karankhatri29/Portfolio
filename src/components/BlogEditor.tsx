@@ -8,6 +8,8 @@ import { ImageUploadButton } from "@/components/ImageUploadButton";
 import { MarkdownContent } from "@/components/MarkdownContent";
 import { formatPostDate, readingMinutes } from "@/lib/content/blog-utils";
 import type { BlogPost, PostStatus } from "@/lib/content/blog";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { IconButton } from "@/components/IconButton";
 
 type Status =
   | { kind: "idle" }
@@ -18,9 +20,11 @@ type Status =
 
 type Form = { slug: string; title: string; date: string; summary: string; content: string; tags: string; status: PostStatus };
 
-const inputClass = "mt-1 block w-full border border-ink/20 bg-paper px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-accent";
-const primaryButton = "border border-accent px-4 py-2 text-sm font-semibold text-accent focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-paper disabled:opacity-50";
-const linkButton = "text-sm font-semibold text-accent underline underline-offset-4 focus:outline-none focus:ring-2 focus:ring-accent";
+const card = "border border-accent/20 bg-ink/[0.035] backdrop-blur-xl";
+const inputClass = "mt-1.5 block w-full rounded-md border border-ink/15 bg-ink/[0.05] px-3 py-2.5 text-base text-ink placeholder:text-muted/50 transition focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/40";
+const primaryButton = "rounded-full bg-accent px-6 py-2.5 text-sm font-semibold text-paper transition hover:shadow-[0_6px_24px_-6px_rgb(var(--color-accent)/0.7)] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper disabled:opacity-50";
+const linkButton = "inline-flex min-h-11 items-center rounded-full border border-ink/20 px-4 text-xs font-semibold text-ink transition hover:border-accent hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent";
+const actionBar = "sticky bottom-0 -mx-5 -mb-5 flex flex-wrap items-center gap-4 border-t border-ink/10 bg-paper/85 px-5 py-4 backdrop-blur sm:-mx-6 sm:-mb-6 sm:px-6";
 
 const today = () => new Date().toISOString().slice(0, 10);
 const emptyForm = (): Form => ({ slug: "", title: "", date: today(), summary: "", content: "", tags: "", status: "draft" });
@@ -91,33 +95,34 @@ export function BlogEditor({ initialPosts }: { initialPosts: BlogPost[] }) {
   }
 
   return (
-    <div>
+    <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]">
       <section aria-labelledby="posts-title">
-        <h2 id="posts-title" className="font-display text-2xl font-semibold">Posts</h2>
+        <h2 id="posts-title" className="font-display text-2xl font-semibold tracking-tight">Posts</h2>
         {posts.length ? (
-          <ul className="mt-6 divide-y divide-ink/10 border border-ink/10">
+          <ul className="mt-6 grid gap-3">
             {posts.map((post) => (
-              <li key={post.slug} className="flex flex-wrap items-center justify-between gap-3 p-4">
-                <span>
-                  <span className="font-semibold">{post.title}</span>{" "}
-                  <span className={`ml-1 rounded-full border px-2 py-0.5 text-xs ${post.status === "published" ? "border-green-600 text-green-600" : "border-ink/30 text-muted"}`}>{post.status}</span>
-                  <span className="ml-2 text-sm text-muted">{formatPostDate(post.date)}</span>
-                </span>
-                <span className="flex gap-4">
+              <li key={post.slug} className={`${card} grid gap-3 p-4 transition hover:border-accent/50`}>
+                <div>
+                  <p className="font-semibold leading-snug">{post.title}</p>
+                  <p className="mt-1.5 flex flex-wrap items-center gap-2 text-sm text-muted">
+                    <span className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${post.status === "published" ? "border-accent/50 bg-accent/10 text-accent" : "border-ink/25 text-muted"}`}>{post.status}</span>
+                    <span>{formatPostDate(post.date)}</span>
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
                   <Link href={`/blog/${post.slug}`} className={linkButton}>{post.status === "published" ? "View" : "Preview"} <span className="sr-only">{post.title}</span></Link>
-                  <button type="button" className={linkButton} onClick={() => startEdit(post)}>Edit {post.title}</button>
-                  {confirmingSlug === post.slug
-                    ? <button type="button" className={linkButton} onClick={() => remove(post.slug)}>Confirm delete {post.title}</button>
-                    : <button type="button" className={linkButton} onClick={() => setConfirmingSlug(post.slug)}>Delete {post.title}</button>}
-                </span>
+                  <IconButton kind="edit" label={`Edit ${post.title}`} onClick={() => startEdit(post)} />
+                  <IconButton kind="delete" label={`Delete ${post.title}`} onClick={() => setConfirmingSlug(post.slug)} />
+                </div>
               </li>
             ))}
           </ul>
-        ) : <p className="mt-6 text-muted">No posts yet.</p>}
+        ) : <p className={`${card} mt-6 p-6 text-muted`}>No posts yet.</p>}
+        <ConfirmDialog name={posts.find((item) => item.slug === confirmingSlug)?.title ?? null} onConfirm={() => confirmingSlug && remove(confirmingSlug)} onCancel={() => setConfirmingSlug(null)} />
       </section>
 
-      <form onSubmit={submit} className="mt-10 grid gap-4" aria-label={editingSlug ? "Edit post" : "New post"}>
-        <h2 className="font-display text-2xl font-semibold">{editingSlug ? "Edit post" : "New post"}</h2>
+      <form onSubmit={submit} className={`${card} grid gap-4 p-5 sm:p-6`} aria-label={editingSlug ? "Edit post" : "New post"}>
+        <h2 className="font-display text-2xl font-semibold tracking-tight">{editingSlug ? "Edit post" : "New post"}</h2>
         <label className="block text-sm font-medium">Title
           <input className={inputClass} value={form.title} onChange={(event) => setTitle(event.target.value)} />
         </label>
@@ -150,10 +155,10 @@ export function BlogEditor({ initialPosts }: { initialPosts: BlogPost[] }) {
               <button type="button" aria-pressed={preview} className={linkButton} onClick={() => setPreview((value) => !value)}>{preview ? "Hide preview" : "Show preview"}</button>
             </div>
           </div>
-          <div className={preview ? "mt-1 grid gap-4 lg:grid-cols-2" : "mt-1"}>
+          <div className={preview ? "mt-1.5 grid gap-4 2xl:grid-cols-2" : "mt-1.5"}>
             <textarea id="post-content" className={`${inputClass} mt-0 font-mono text-sm`} rows={18} value={form.content} onChange={(event) => setForm({ ...form, content: event.target.value })} />
             {preview ? (
-              <div aria-label="Preview" role="region" className="prose max-w-none overflow-auto border border-ink/10 p-4 prose-headings:font-display prose-headings:text-ink prose-p:text-muted prose-a:text-accent dark:prose-invert lg:max-h-[30rem]">
+              <div aria-label="Preview" role="region" className="prose max-w-none overflow-auto rounded-md border border-accent/20 bg-ink/[0.03] p-4 prose-headings:font-display prose-headings:text-ink prose-p:text-muted prose-a:text-accent dark:prose-invert lg:max-h-[30rem]">
                 {form.content.trim() ? <MarkdownContent>{form.content}</MarkdownContent> : <p>Nothing to preview yet.</p>}
               </div>
             ) : null}
@@ -161,13 +166,13 @@ export function BlogEditor({ initialPosts }: { initialPosts: BlogPost[] }) {
           <p className="mt-1 text-xs text-muted">{form.content.trim() ? `${readingMinutes(form.content)} min read` : "Write something to see the reading time."}</p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-4">
+        <div className={actionBar}>
           <button type="submit" className={primaryButton} disabled={pending}>{editingSlug ? "Save post" : form.status === "published" ? "Publish post" : "Save draft"}</button>
           {editingSlug ? <button type="button" className={linkButton} onClick={reset}>Cancel edit</button> : null}
           {status.kind === "pending" ? <p role="status" className="text-sm text-muted">Saving...</p> : null}
           {status.kind === "success" ? <p role="status" className="text-sm text-accent">{status.message}</p> : null}
-          {status.kind === "server" ? <p role="alert" className="text-sm text-red-700">{status.message}</p> : null}
-          {status.kind === "validation" ? <ul role="alert" className="list-disc pl-5 text-sm text-red-700">{status.errors.map((error) => <li key={error}>{error}</li>)}</ul> : null}
+          {status.kind === "server" ? <p role="alert" className="text-sm text-[#ff8a80]">{status.message}</p> : null}
+          {status.kind === "validation" ? <ul role="alert" className="list-disc pl-5 text-sm text-[#ff8a80]">{status.errors.map((error) => <li key={error}>{error}</li>)}</ul> : null}
         </div>
       </form>
     </div>

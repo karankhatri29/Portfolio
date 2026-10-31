@@ -45,3 +45,10 @@
 html.terminal-open {
   overflow: hidden;
 }
+
+/* The hero terminal's glow slowly breathes. Nothing on it tells you to click; it just looks alive. */
+@keyframes term-breathe {
+  50% { border-color: rgb(var(--color-accent) / 0.6); box-shadow: 0 0 60px -8px rgb(var(--color-accent) / 0.7); }
+}
+.term-breathe { animation: term-breathe 3.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .term-breathe { animation: none; } }

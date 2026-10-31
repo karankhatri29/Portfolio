@@ -1,5 +1,5 @@
 import { groupSources, percentChange } from "@/lib/analytics/tracking";
-import type { DashboardData } from "@/lib/analytics/repository";
+import type { DashboardData, HealCount } from "@/lib/analytics/repository";
 
 function trend(current: number, previous: number, days: number) {
   const change = percentChange(current, previous);
@@ -8,7 +8,7 @@ function trend(current: number, previous: number, days: number) {
   return `${change > 0 ? "up" : "down"} ${Math.abs(change)}% from the previous ${days} days`;
 }
 
-export function buildDigest(data: DashboardData, siteUrl: string, blogTitles: Record<string, string> = {}): { subject: string; text: string } {
+export function buildDigest(data: DashboardData, siteUrl: string, blogTitles: Record<string, string> = {}, healed: HealCount[] = []): { subject: string; text: string } {
   const { summary, days } = data;
   const lines: string[] = [
     `Your portfolio, last ${days} days`,
@@ -18,6 +18,13 @@ export function buildDigest(data: DashboardData, siteUrl: string, blogTitles: Re
     `Contact-link clicks: ${summary.contactClicks}`,
     `Messages: ${summary.messages}${summary.unreadMessages > 0 ? ` (${summary.unreadMessages} unread in total)` : ""}`,
   ];
+
+  const healedTotal = healed.reduce((sum, item) => sum + item.count, 0);
+  if (healedTotal > 0) {
+    const byDependency = new Map<string, number>();
+    for (const item of healed) byDependency.set(item.dependency, (byDependency.get(item.dependency) ?? 0) + item.count);
+    lines.push(`Recovered automatically: ${healedTotal} time${healedTotal === 1 ? "" : "s"} (${[...byDependency].map(([name, count]) => `${name} ${count}`).join(", ")})`);
+  }
 
   if (data.errors.total > 0) lines.push(`Errors: ${data.errors.total} logged, worth a look on the dashboard`);
 

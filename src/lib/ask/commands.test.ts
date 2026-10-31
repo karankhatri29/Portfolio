@@ -47,6 +47,7 @@ describe("runCommand", () => {
       { kind: "text", text: "Unlinked (2025)" },
     ]);
     expect(lines(runCommand("contact", context))).toEqual([
+      { kind: "text", text: "Email is the quickest way to reach him." },
       { kind: "link", text: "Email: me@example.com", href: "mailto:me@example.com" },
       { kind: "link", text: "GitHub: github.com/me", href: "https://github.com/me" },
     ]);
@@ -116,5 +117,60 @@ describe("suggestions and loading phrases", () => {
     const afters = LOADING_PHRASES.map((phrase) => phrase.after);
     expect([...afters].sort((a, b) => a - b)).toEqual(afters);
     expect(afters[0]).toBe(0);
+  });
+});
+
+describe("runCommand answers with real content when the page provides it", () => {
+  const rich: TerminalContext = {
+    ...context,
+    focus: [
+      { command: "whoami", output: "Karan Kaushik Khatri" },
+      { command: "cat focus.txt", output: "backend · data · applied AI" },
+      { command: "now", output: "Gmail knowledge-graph pipeline" },
+    ],
+    about: { introduction: "I am Karan, a CSE student at VIT Vellore.", detail: "I build practical tools that connect messy data to clear workflows." },
+    availability: "Open to backend and applied AI roles",
+    skills: [{ name: "AI and NLP", tools: ["spaCy"], description: "Language models and retrieval on real data." }, { name: "Databases", tools: [] }],
+    projects: [
+      { title: "Email Triage", year: "2026", href: "/projects/triage", role: "Backend developer", summary: "A knowledge-graph-backed Gmail pipeline." },
+      { title: "Role only", year: "2025", role: "Data analyst" },
+      { title: "Bare", year: "2024" },
+    ],
+  };
+
+  it("whoami says who he is, what he does, what he is on now and whether he is available, instead of repeating his name", () => {
+    expect(lines(runCommand("whoami", rich)).map((line) => line.text)).toEqual([
+      "I am Karan, a CSE student at VIT Vellore.",
+      "I build practical tools that connect messy data to clear workflows.",
+      "Focus: backend · data · applied AI",
+      "Now: Gmail knowledge-graph pipeline",
+      "Availability: Open to backend and applied AI roles",
+    ]);
+  });
+
+  it("whoami works without the optional about details or availability", () => {
+    const minimal = { ...rich, about: { introduction: "Hello." }, availability: undefined };
+    expect(lines(runCommand("whoami", minimal)).map((line) => line.text)).toEqual(["Hello.", "Focus: backend · data · applied AI", "Now: Gmail knowledge-graph pipeline"]);
+  });
+
+  it("projects and ls give each project a link and a line saying what it is", () => {
+    for (const input of ["projects", "ls"]) {
+      expect(lines(runCommand(input, rich))).toEqual([
+        { kind: "link", text: "Email Triage (2026)", href: "/projects/triage" },
+        { kind: "text", text: "  Backend developer · A knowledge-graph-backed Gmail pipeline." },
+        { kind: "text", text: "Role only (2025)" },
+        { kind: "text", text: "  Data analyst" },
+        { kind: "text", text: "Bare (2024)" },
+      ]);
+    }
+  });
+
+  it("skills adds what each competency is about under its tools", () => {
+    expect(lines(runCommand("skills", rich)).map((line) => line.text)).toEqual(["AI and NLP: spaCy", "  Language models and retrieval on real data.", "Databases"]);
+  });
+
+  it("contact leads with the quickest route only when there is an email to point to", () => {
+    const noEmail = { ...rich, contacts: [{ label: "GitHub", text: "github.com/me", href: "https://github.com/me" }] };
+    expect(lines(runCommand("contact", noEmail))).toEqual([{ kind: "link", text: "GitHub: github.com/me", href: "https://github.com/me" }]);
   });
 });

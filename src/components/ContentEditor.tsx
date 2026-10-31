@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import type { FormEvent } from "react";
+import { useId, useState } from "react";
+import type { FormEvent, KeyboardEvent, ReactNode } from "react";
 
 import { ImageUploadButton } from "@/components/ImageUploadButton";
 
 import type { Highlight, HighlightKind, Project, SkillRecord } from "@/lib/content/repository";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { IconButton } from "@/components/IconButton";
 
 type Status =
   | { kind: "idle" }
@@ -16,9 +18,12 @@ type Status =
 
 type SendResult = { ok: true; data: Record<string, unknown> } | { ok: false; status: Status };
 
-const inputClass = "mt-1 block w-full border border-ink/20 bg-paper px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-accent";
-const primaryButton = "border border-accent px-4 py-2 text-sm font-semibold text-accent focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-paper disabled:opacity-50";
-const linkButton = "text-sm font-semibold text-accent underline underline-offset-4 focus:outline-none focus:ring-2 focus:ring-accent";
+const card = "border border-accent/20 bg-ink/[0.035] backdrop-blur-xl";
+const inputClass = "mt-1.5 block w-full rounded-md border border-ink/15 bg-ink/[0.05] px-3 py-2.5 text-base text-ink placeholder:text-muted/50 transition focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/40";
+const primaryButton = "rounded-full bg-accent px-6 py-2.5 text-sm font-semibold text-paper transition hover:shadow-[0_6px_24px_-6px_rgb(var(--color-accent)/0.7)] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper disabled:opacity-50";
+const linkButton = "rounded-full border border-ink/20 px-3.5 py-1.5 text-xs font-semibold text-ink transition hover:border-accent hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent";
+const listCard = `${card} flex flex-wrap items-center justify-between gap-3 p-4 transition hover:border-accent/50`;
+const actionBar = "sticky bottom-0 -mx-5 -mb-5 flex flex-wrap items-center gap-4 border-t border-ink/10 bg-paper/85 px-5 py-4 backdrop-blur sm:-mx-6 sm:-mb-6 sm:px-6";
 
 async function send(method: string, url: string, body: unknown): Promise<SendResult> {
   try {
@@ -39,10 +44,10 @@ function StatusMessage({ status }: { status: Status }) {
   if (status.kind === "idle") return null;
   if (status.kind === "pending") return <p role="status" className="text-sm text-muted">Saving...</p>;
   if (status.kind === "success") return <p role="status" className="text-sm text-accent">{status.message}</p>;
-  if (status.kind === "server") return <p role="alert" className="text-sm text-red-700">{status.message}</p>;
+  if (status.kind === "server") return <p role="alert" className="text-sm text-[#ff8a80]">{status.message}</p>;
 
   return (
-    <ul role="alert" className="list-disc pl-5 text-sm text-red-700">
+    <ul role="alert" className="list-disc pl-5 text-sm text-[#ff8a80]">
       {status.errors.map((error) => <li key={error}>{error}</li>)}
     </ul>
   );
@@ -103,26 +108,26 @@ function ProjectEditor({ initialProjects }: { initialProjects: Project[] }) {
   }
 
   return (
-    <section aria-labelledby="admin-projects-title" className="border-t border-ink/10 py-10">
+    <section aria-labelledby="admin-projects-title" className="py-2">
       <h2 id="admin-projects-title" className="font-display text-2xl font-semibold">Projects</h2>
+      <div className="mt-8 grid items-start gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
       {projects.length ? (
-        <ul className="mt-6 divide-y divide-ink/10 border border-ink/10">
+        <ul className="grid gap-3">
           {projects.map((project) => (
-            <li key={project.slug} className="flex flex-wrap items-center justify-between gap-3 p-4">
+            <li key={project.slug} className={listCard}>
               <span><span className="font-semibold">{project.title}</span> <span className="text-sm text-muted">({project.slug})</span></span>
-              <span className="flex gap-4">
-                <button type="button" className={linkButton} onClick={() => startEdit(project)}>Edit {project.title}</button>
-                {confirmingSlug === project.slug
-                  ? <button type="button" className={linkButton} onClick={() => remove(project.slug)}>Confirm delete {project.title}</button>
-                  : <button type="button" className={linkButton} onClick={() => setConfirmingSlug(project.slug)}>Delete {project.title}</button>}
+              <span className="flex flex-wrap gap-2">
+                <IconButton kind="edit" label={`Edit ${project.title}`} onClick={() => startEdit(project)} />
+                <IconButton kind="delete" label={`Delete ${project.title}`} onClick={() => setConfirmingSlug(project.slug)} />
               </span>
             </li>
           ))}
         </ul>
-      ) : <p className="mt-6 text-muted">No projects yet.</p>}
+      ) : <p className={`${card} p-6 text-muted`}>No projects yet.</p>}
 
-      <form onSubmit={submit} className="mt-8 grid gap-4" aria-label={editingSlug ? "Edit project" : "New project"}>
-        <h3 className="text-lg font-semibold">{editingSlug ? "Edit project" : "New project"}</h3>
+      <form onSubmit={submit} className={`${card} grid gap-4 p-5 sm:p-6`} aria-label={editingSlug ? "Edit project" : "New project"}>
+        <h3 className="font-display text-xl font-semibold">{editingSlug ? "Edit project" : "New project"}</h3>
+        <div className="grid gap-4 sm:grid-cols-2">
         <label className="block text-sm font-medium">Slug
           <input className={inputClass} value={form.slug} disabled={editingSlug !== null} onChange={(event) => setForm({ ...form, slug: event.target.value })} />
         </label>
@@ -135,6 +140,7 @@ function ProjectEditor({ initialProjects }: { initialProjects: Project[] }) {
         <label className="block text-sm font-medium">Role
           <input className={inputClass} value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })} />
         </label>
+        </div>
         <label className="block text-sm font-medium">Summary
           <textarea className={inputClass} rows={3} value={form.summary} onChange={(event) => setForm({ ...form, summary: event.target.value })} />
         </label>
@@ -147,7 +153,7 @@ function ProjectEditor({ initialProjects }: { initialProjects: Project[] }) {
         <label className="block text-sm font-medium">GitHub repository URL
           <input className={inputClass} type="url" placeholder="https://github.com/you/repo" value={form.githubUrl} onChange={(event) => setForm({ ...form, githubUrl: event.target.value })} />
         </label>
-        <fieldset className="grid gap-4 border border-ink/10 p-4">
+        <fieldset className="grid gap-4 rounded-md border border-ink/15 p-4">
           <legend className="px-2 text-sm font-semibold">Case study (optional)</legend>
           <label className="block text-sm font-medium">The problem
             <textarea className={inputClass} rows={3} value={form.problem} onChange={(event) => setForm({ ...form, problem: event.target.value })} />
@@ -169,12 +175,14 @@ function ProjectEditor({ initialProjects }: { initialProjects: Project[] }) {
           </label>
           <ImageUploadButton label="Upload screenshot" onUploaded={(url) => setForm((current) => ({ ...current, images: `${current.images}${current.images && !current.images.endsWith("\n") ? "\n" : ""}${url} | ` }))} />
         </fieldset>
-        <div className="flex flex-wrap items-center gap-4">
+        <div className={actionBar}>
           <button type="submit" className={primaryButton} disabled={pending}>{editingSlug ? "Save project" : "Create project"}</button>
           {editingSlug ? <button type="button" className={linkButton} onClick={reset}>Cancel edit</button> : null}
           <StatusMessage status={status} />
         </div>
       </form>
+    </div>
+      <ConfirmDialog name={projects.find((item) => item.slug === confirmingSlug)?.title ?? null} onConfirm={() => confirmingSlug && remove(confirmingSlug)} onCancel={() => setConfirmingSlug(null)} />
     </section>
   );
 }
@@ -226,26 +234,25 @@ function SkillEditor({ initialSkills }: { initialSkills: SkillRecord[] }) {
   }
 
   return (
-    <section aria-labelledby="admin-skills-title" className="border-t border-ink/10 py-10">
+    <section aria-labelledby="admin-skills-title" className="py-2">
       <h2 id="admin-skills-title" className="font-display text-2xl font-semibold">Competencies</h2>
+      <div className="mt-8 grid items-start gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
       {skills.length ? (
-        <ul className="mt-6 divide-y divide-ink/10 border border-ink/10">
+        <ul className="grid gap-3">
           {skills.map((skill) => (
-            <li key={skill.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
+            <li key={skill.id} className={listCard}>
               <span className="font-semibold">{skill.name}</span>
-              <span className="flex gap-4">
-                <button type="button" className={linkButton} onClick={() => startEdit(skill)}>Edit {skill.name}</button>
-                {confirmingId === skill.id
-                  ? <button type="button" className={linkButton} onClick={() => remove(skill.id)}>Confirm delete {skill.name}</button>
-                  : <button type="button" className={linkButton} onClick={() => setConfirmingId(skill.id)}>Delete {skill.name}</button>}
+              <span className="flex flex-wrap gap-2">
+                <IconButton kind="edit" label={`Edit ${skill.name}`} onClick={() => startEdit(skill)} />
+                <IconButton kind="delete" label={`Delete ${skill.name}`} onClick={() => setConfirmingId(skill.id)} />
               </span>
             </li>
           ))}
         </ul>
-      ) : <p className="mt-6 text-muted">No competencies yet.</p>}
+      ) : <p className={`${card} p-6 text-muted`}>No competencies yet.</p>}
 
-      <form onSubmit={submit} className="mt-8 grid gap-4" aria-label={editingId ? "Edit competency" : "New competency"}>
-        <h3 className="text-lg font-semibold">{editingId ? "Edit competency" : "New competency"}</h3>
+      <form onSubmit={submit} className={`${card} grid gap-4 p-5 sm:p-6`} aria-label={editingId ? "Edit competency" : "New competency"}>
+        <h3 className="font-display text-xl font-semibold">{editingId ? "Edit competency" : "New competency"}</h3>
         <label className="block text-sm font-medium">Competency name
           <input className={inputClass} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
         </label>
@@ -255,12 +262,14 @@ function SkillEditor({ initialSkills }: { initialSkills: SkillRecord[] }) {
         <label className="block text-sm font-medium">Tools (comma separated)
           <input className={inputClass} value={form.tools} onChange={(event) => setForm({ ...form, tools: event.target.value })} />
         </label>
-        <div className="flex flex-wrap items-center gap-4">
+        <div className={actionBar}>
           <button type="submit" className={primaryButton} disabled={pending}>{editingId ? "Save competency" : "Create competency"}</button>
           {editingId ? <button type="button" className={linkButton} onClick={reset}>Cancel edit</button> : null}
           <StatusMessage status={status} />
         </div>
       </form>
+    </div>
+      <ConfirmDialog name={skills.find((item) => item.id === confirmingId)?.name ?? null} onConfirm={() => confirmingId && remove(confirmingId)} onCancel={() => setConfirmingId(null)} />
     </section>
   );
 }
@@ -317,27 +326,26 @@ function HighlightEditor({ initialHighlights }: { initialHighlights: Highlight[]
   }
 
   return (
-    <section aria-labelledby="admin-highlights-title" className="border-t border-ink/10 py-10">
+    <section aria-labelledby="admin-highlights-title" className="py-2">
       <h2 id="admin-highlights-title" className="font-display text-2xl font-semibold">Testimonials and publications</h2>
       <p className="mt-2 text-sm text-muted">These sections appear on the home page only when at least one entry exists.</p>
+      <div className="mt-8 grid items-start gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
       {items.length ? (
-        <ul className="mt-6 divide-y divide-ink/10 border border-ink/10">
+        <ul className="grid gap-3">
           {items.map((item) => (
-            <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
+            <li key={item.id} className={listCard}>
               <span><span className="font-semibold">{item.title}</span> <span className="text-sm text-muted">({item.kind})</span></span>
-              <span className="flex gap-4">
-                <button type="button" className={linkButton} onClick={() => startEdit(item)}>Edit {item.title}</button>
-                {confirmingId === item.id
-                  ? <button type="button" className={linkButton} onClick={() => remove(item.id)}>Confirm delete {item.title}</button>
-                  : <button type="button" className={linkButton} onClick={() => setConfirmingId(item.id)}>Delete {item.title}</button>}
+              <span className="flex flex-wrap gap-2">
+                <IconButton kind="edit" label={`Edit ${item.title}`} onClick={() => startEdit(item)} />
+                <IconButton kind="delete" label={`Delete ${item.title}`} onClick={() => setConfirmingId(item.id)} />
               </span>
             </li>
           ))}
         </ul>
-      ) : <p className="mt-6 text-muted">No entries yet.</p>}
+      ) : <p className={`${card} p-6 text-muted`}>No entries yet.</p>}
 
-      <form onSubmit={submit} className="mt-8 grid gap-4" aria-label={editingId ? "Edit entry" : "New entry"}>
-        <h3 className="text-lg font-semibold">{editingId ? "Edit entry" : "New entry"}</h3>
+      <form onSubmit={submit} className={`${card} grid gap-4 p-5 sm:p-6`} aria-label={editingId ? "Edit entry" : "New entry"}>
+        <h3 className="font-display text-xl font-semibold">{editingId ? "Edit entry" : "New entry"}</h3>
         <label className="block text-sm font-medium">Type
           <select className={inputClass} value={form.kind} onChange={(event) => setForm({ ...form, kind: event.target.value as HighlightKind })}>
             <option value="testimonial">Testimonial</option>
@@ -356,22 +364,64 @@ function HighlightEditor({ initialHighlights }: { initialHighlights: Highlight[]
         <label className="block text-sm font-medium">Link (optional)
           <input className={inputClass} type="url" placeholder="https://" value={form.url} onChange={(event) => setForm({ ...form, url: event.target.value })} />
         </label>
-        <div className="flex flex-wrap items-center gap-4">
+        <div className={actionBar}>
           <button type="submit" className={primaryButton} disabled={pending}>{editingId ? "Save entry" : "Create entry"}</button>
           {editingId ? <button type="button" className={linkButton} onClick={reset}>Cancel edit</button> : null}
           <StatusMessage status={status} />
         </div>
       </form>
+    </div>
+      <ConfirmDialog name={items.find((item) => item.id === confirmingId)?.title ?? null} onConfirm={() => confirmingId && remove(confirmingId)} onCancel={() => setConfirmingId(null)} />
     </section>
   );
 }
 
+const TABS = [
+  { id: "projects", label: "Projects" },
+  { id: "skills", label: "Competencies" },
+  { id: "highlights", label: "Testimonials and publications" },
+] as const;
+
 export function ContentEditor({ initialProjects, initialSkills, initialHighlights = [] }: { initialProjects: Project[]; initialSkills: SkillRecord[]; initialHighlights?: Highlight[] }) {
+  const [tab, setTab] = useState<(typeof TABS)[number]["id"]>("projects");
+  const baseId = useId();
+
+  function onTabKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number) {
+    const move = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+    if (!move) return;
+    event.preventDefault();
+    const next = TABS[(index + move + TABS.length) % TABS.length];
+    setTab(next.id);
+    document.getElementById(`${baseId}-tab-${next.id}`)?.focus();
+  }
+
+  const panel = (id: (typeof TABS)[number]["id"], content: ReactNode) => (
+    <div role="tabpanel" id={`${baseId}-panel-${id}`} aria-labelledby={`${baseId}-tab-${id}`} className={tab === id ? "pt-8" : "hidden"}>{content}</div>
+  );
+
   return (
     <div>
-      <ProjectEditor initialProjects={initialProjects} />
-      <SkillEditor initialSkills={initialSkills} />
-      <HighlightEditor initialHighlights={initialHighlights} />
+      <div role="tablist" aria-label="Content to edit" className="flex gap-1 overflow-x-auto border-b border-ink/10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {TABS.map((item, index) => (
+          <button
+            key={item.id}
+            type="button"
+            role="tab"
+            id={`${baseId}-tab-${item.id}`}
+            aria-selected={tab === item.id}
+            aria-controls={`${baseId}-panel-${item.id}`}
+            tabIndex={tab === item.id ? 0 : -1}
+            onClick={() => setTab(item.id)}
+            onKeyDown={(event) => onTabKeyDown(event, index)}
+            className={`-mb-px min-h-11 shrink-0 border-b-2 px-4 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${tab === item.id ? "border-accent text-accent" : "border-transparent text-muted hover:text-ink"}`}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+      {panel("projects", <ProjectEditor initialProjects={initialProjects} />)}
+      {panel("skills", <SkillEditor initialSkills={initialSkills} />)}
+      {panel("highlights", <HighlightEditor initialHighlights={initialHighlights} />)}
     </div>
   );
 }
