@@ -1,4 +1,5 @@
-import { neon } from "@neondatabase/serverless";
+import { invalidateContent, cachedRead } from "@/lib/content/cache";
+import { retryRead, sqlClient } from "@/lib/db";
 
 import { HIGHLIGHT_KINDS } from "@/lib/content/highlight-kinds";
 import type { HighlightKind } from "@/lib/content/highlight-kinds";
@@ -38,14 +39,6 @@ export type SkillRecord = {
 type ProjectRow = { slug: string; title: string; year: string; summary: string; role: string; outcomes: string[]; stack: string[] | null; github_url: string | null; problem: string | null; approach: string | null; result: string | null; live_url: string | null; video_url: string | null; images: ProjectImage[] | null };
 type SkillRow = { id: string; name: string; description: string; tools: string[] | null };
 
-function sqlClient() {
-  const connectionString = process.env.DATABASE_URL;
-  if (!connectionString) {
-    throw new Error("DATABASE_URL is not configured");
-  }
-  return neon(connectionString);
-}
-
 function toProject(row: ProjectRow): Project {
   return { slug: row.slug, title: row.title, year: row.year, summary: row.summary, role: row.role, outcomes: row.outcomes, stack: row.stack ?? [], githubUrl: row.github_url ?? undefined, problem: row.problem ?? undefined, approach: row.approach ?? undefined, result: row.result ?? undefined, liveUrl: row.live_url ?? undefined, videoUrl: row.video_url ?? undefined, images: row.images ?? [] };
 }
@@ -54,11 +47,13 @@ function toSkill(row: SkillRow): SkillRecord {
   return { id: row.id, name: row.name, description: row.description, tools: row.tools ?? [] };
 }
 
-export async function listProjects(): Promise<Project[]> {
+const readProjects = cachedRead("projects", (): Promise<Project[]> => retryRead(async () => {
   const sql = sqlClient();
   const rows = (await sql`SELECT slug, title, year, summary, role, outcomes, stack, github_url, problem, approach, result, live_url, video_url, images FROM projects ORDER BY year DESC, title ASC`) as ProjectRow[];
   return rows.map(toProject);
-}
+}));
+
+export const listProjects = (): Promise<Project[]> => readProjects();
 
 export async function getProject(slug: string): Promise<Project | undefined> {
   const sql = sqlClient();
@@ -73,6 +68,7 @@ export async function createProject(input: Project): Promise<Project> {
     VALUES (${input.slug}, ${input.title}, ${input.year}, ${input.summary}, ${input.role}, ${JSON.stringify(input.outcomes)}::jsonb, ${JSON.stringify(input.stack ?? [])}::jsonb, ${input.githubUrl || null}, ${input.problem || null}, ${input.approach || null}, ${input.result || null}, ${input.liveUrl || null}, ${input.videoUrl || null}, ${JSON.stringify(input.images ?? [])}::jsonb)
     RETURNING slug, title, year, summary, role, outcomes, stack, github_url, problem, approach, result, live_url, video_url, images
   `) as ProjectRow[];
+  invalidateContent("projects");
   return toProject(rows[0]);
 }
 
@@ -88,20 +84,24 @@ export async function updateProject(slug: string, patch: Partial<Omit<Project, "
     WHERE slug = ${slug}
     RETURNING slug, title, year, summary, role, outcomes, stack, github_url, problem, approach, result, live_url, video_url, images
   `) as ProjectRow[];
+  invalidateContent("projects");
   return rows[0] ? toProject(rows[0]) : undefined;
 }
 
 export async function deleteProject(slug: string): Promise<boolean> {
   const sql = sqlClient();
   const rows = (await sql`DELETE FROM projects WHERE slug = ${slug} RETURNING slug`) as { slug: string }[];
+  invalidateContent("projects");
   return rows.length > 0;
 }
 
-export async function listSkills(): Promise<SkillRecord[]> {
+const readSkills = cachedRead("skills", (): Promise<SkillRecord[]> => retryRead(async () => {
   const sql = sqlClient();
   const rows = (await sql`SELECT id, name, description, tools FROM competencies ORDER BY name ASC`) as SkillRow[];
   return rows.map(toSkill);
-}
+}));
+
+export const listSkills = (): Promise<SkillRecord[]> => readSkills();
 
 export async function createSkill(input: Omit<SkillRecord, "id">): Promise<SkillRecord> {
   const sql = sqlClient();
@@ -111,6 +111,7 @@ export async function createSkill(input: Omit<SkillRecord, "id">): Promise<Skill
     VALUES (${id}, ${input.name}, ${input.description}, ${JSON.stringify(input.tools ?? [])}::jsonb)
     RETURNING id, name, description, tools
   `) as SkillRow[];
+  invalidateContent("skills");
   return toSkill(rows[0]);
 }
 
@@ -127,12 +128,14 @@ export async function updateSkill(id: string, patch: Partial<Omit<SkillRecord, "
     WHERE id = ${id}
     RETURNING id, name, description, tools
   `) as SkillRow[];
+  invalidateContent("skills");
   return rows[0] ? toSkill(rows[0]) : undefined;
 }
 
 export async function deleteSkill(id: string): Promise<boolean> {
   const sql = sqlClient();
   const rows = (await sql`DELETE FROM competencies WHERE id = ${id} RETURNING id`) as { id: string }[];
+  invalidateContent("skills");
   return rows.length > 0;
 }
 
@@ -142,13 +145,15 @@ function toHighlight(row: HighlightRow): Highlight {
   return { id: row.id, kind: row.kind, title: row.title, subtitle: row.subtitle, body: row.body, url: row.url ?? undefined };
 }
 
-export async function listHighlights(kind?: HighlightKind): Promise<Highlight[]> {
+const readHighlights = cachedRead("highlights", (kind?: HighlightKind): Promise<Highlight[]> => retryRead(async () => {
   const sql = sqlClient();
   const rows = (kind
     ? await sql`SELECT id, kind, title, subtitle, body, url FROM highlights WHERE kind = ${kind} ORDER BY created_at DESC`
     : await sql`SELECT id, kind, title, subtitle, body, url FROM highlights ORDER BY kind ASC, created_at DESC`) as HighlightRow[];
   return rows.map(toHighlight);
-}
+}));
+
+export const listHighlights = (kind?: HighlightKind): Promise<Highlight[]> => readHighlights(kind);
 
 export async function createHighlight(input: Omit<Highlight, "id">): Promise<Highlight> {
   const sql = sqlClient();
@@ -157,6 +162,7 @@ export async function createHighlight(input: Omit<Highlight, "id">): Promise<Hig
     VALUES (${crypto.randomUUID()}, ${input.kind}, ${input.title}, ${input.subtitle}, ${input.body}, ${input.url || null})
     RETURNING id, kind, title, subtitle, body, url
   `) as HighlightRow[];
+  invalidateContent("highlights");
   return toHighlight(rows[0]);
 }
 
@@ -171,11 +177,13 @@ export async function updateHighlight(id: string, patch: Partial<Omit<Highlight,
     WHERE id = ${id}
     RETURNING id, kind, title, subtitle, body, url
   `) as HighlightRow[];
+  invalidateContent("highlights");
   return rows[0] ? toHighlight(rows[0]) : undefined;
 }
 
 export async function deleteHighlight(id: string): Promise<boolean> {
   const sql = sqlClient();
   const rows = (await sql`DELETE FROM highlights WHERE id = ${id} RETURNING id`) as { id: string }[];
+  invalidateContent("highlights");
   return rows.length > 0;
 }

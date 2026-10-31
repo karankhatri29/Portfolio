@@ -2,10 +2,15 @@ import { timingSafeEqual } from "node:crypto";
 
 import { NextResponse } from "next/server";
 
-import { getDashboardData } from "@/lib/analytics/repository";
+import { getDashboardData, pruneOldAnalytics } from "@/lib/analytics/repository";
+import { readLimit } from "@/lib/ask/limits";
 import { listBlogPosts } from "@/lib/content/blog";
 import { buildDigest } from "@/lib/notify/digest";
 import { emailConfig, sendEmail } from "@/lib/notify/email";
+
+// The dashboard compares each range with the one before it, so the longest range (90 days) needs 180 days of history.
+const MIN_RETENTION_DAYS = 190;
+const DEFAULT_RETENTION_DAYS = 365;
 
 function isAuthorized(request: Request) {
   const secret = process.env.CRON_SECRET;
@@ -18,6 +23,10 @@ function isAuthorized(request: Request) {
 
 export async function GET(request: Request) {
   if (!isAuthorized(request)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  // Housekeeping runs first so it still happens when email is not configured. A failure must not block the digest.
+  const retentionDays = Math.max(MIN_RETENTION_DAYS, readLimit(process.env.ANALYTICS_RETENTION_DAYS, DEFAULT_RETENTION_DAYS));
+  await pruneOldAnalytics(retentionDays).catch((error) => console.error("analytics prune failed", error));
+
   if (!emailConfig()) return NextResponse.json({ sent: false, reason: "Email is not configured" });
 
   try {
