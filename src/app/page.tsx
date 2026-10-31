@@ -11,7 +11,7 @@ import { OpenSource } from "@/components/OpenSource";
 import { Publications } from "@/components/Publications";
 import { Testimonials } from "@/components/Testimonials";
 import { PortfolioShell } from "@/components/PortfolioShell";
-import { ProjectShowcase } from "@/components/ProjectShowcase";
+import { Work } from "@/components/Work";
 import { WritingPreview } from "@/components/WritingPreview";
 import { reportServerError } from "@/lib/analytics/report";
 import { listBlogPosts } from "@/lib/content/blog";
@@ -74,7 +74,7 @@ export default async function Page() {
       ) : (
         <div className="mx-auto max-w-6xl px-5 lg:px-8 defer-render"><CompetencyGrid items={skills} /></div>
       )}
-      <div className="mx-auto max-w-7xl px-5 lg:px-10 defer-render"><ProjectShowcase projects={projects} fallbackGithubUrl={githubProfile} /></div>
+      <div className="mx-auto max-w-7xl px-5 lg:px-10"><Work projects={projects} fallbackGithubUrl={githubProfile} /></div>
       <div className="mx-auto max-w-6xl px-5 lg:px-8 defer-render"><OpenSource activity={github} /></div>
       <div className="mx-auto max-w-6xl px-5 lg:px-8 defer-render"><Publications items={highlights.filter((item) => item.kind === "publication")} /></div>
       <div className="mx-auto max-w-6xl px-5 lg:px-8 defer-render"><Testimonials items={highlights.filter((item) => item.kind === "testimonial")} /></div>
