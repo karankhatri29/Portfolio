@@ -121,7 +121,7 @@ export function HeroSection({ content, bookingUrl, projects, skills }: { content
 
         </div>
 
-        <div className="relative z-30 -mt-2 grid gap-6 pb-10 lg:absolute lg:inset-x-0 lg:bottom-0 lg:mt-0 lg:grid-cols-2 lg:items-end lg:pb-8">
+        <div className="relative z-30 -mt-2 grid gap-8 pb-10 md:grid-cols-2 md:items-start md:gap-10 lg:absolute lg:inset-x-0 lg:bottom-0 lg:mt-0 lg:items-end lg:gap-6 lg:pb-8">
           <div className="lg:col-start-2 lg:ml-auto lg:max-w-[22rem]">
             {claim ? <p aria-hidden="true" className="font-display text-2xl font-semibold leading-tight tracking-tight sm:text-3xl lg:text-[1.7rem]">{claim}</p> : null}
             <p className="mt-4 text-base leading-7 text-muted">{content.summary}</p>
@@ -132,7 +132,7 @@ export function HeroSection({ content, bookingUrl, projects, skills }: { content
             </div>
             <p className="mt-6 max-w-sm border-l border-accent/50 pl-6 text-sm leading-7 text-muted">Selected work, field notes, and practical ideas for making digital products feel more human.</p>
           </div>
-          <div className="w-full max-w-sm lg:col-start-1 lg:row-start-1 lg:max-w-[21rem]">
+          <div className="w-full max-w-sm md:max-w-none lg:col-start-1 lg:row-start-1 lg:max-w-[21rem]">
             <HeroTerminal context={terminalContext(content, projects, skills)}>
               <TerminalCard lines={content.terminal} />
             </HeroTerminal>
