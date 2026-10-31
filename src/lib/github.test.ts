@@ -1,13 +1,16 @@
 /**
  * @jest-environment node
  */
-import { getGithubActivity, githubUsername } from "@/lib/github";
+import { clearGithubLastGood, getGithubActivity, githubUsername } from "@/lib/github";
+
+jest.mock("@/lib/heal", () => ({ recordHeal: jest.fn() }));
 
 const fetchMock = jest.fn();
 const ok = (body: unknown) => Promise.resolve({ ok: true, json: async () => body });
 
 beforeEach(() => {
   fetchMock.mockReset();
+  clearGithubLastGood();
   global.fetch = fetchMock as unknown as typeof fetch;
 });
 
@@ -114,6 +117,46 @@ describe("getGithubActivity", () => {
     await getGithubActivity("me");
     expect(fetchMock.mock.calls[4][1].headers.authorization).toBe("Bearer t0ken");
     delete env.GITHUB_TOKEN;
+  });
+
+  describe("self-healing", () => {
+    const healthy = (url: string) => (url.includes("/search/commits") ? ok({ total_count: 3 }) : url.includes("/events/") ? ok([]) : url.includes("/repos?") ? ok(repos) : ok({ public_repos: 12 }));
+
+    it("shows the last good stats when GitHub then fails, and hides the section only when there are none", async () => {
+      fetchMock.mockImplementation(healthy);
+      const first = await getGithubActivity("me", now);
+      expect(first).not.toBeNull();
+
+      fetchMock.mockResolvedValue({ ok: false, status: 503, json: async () => ({}) });
+      expect(await getGithubActivity("me", now)).toEqual(first);
+      expect(await getGithubActivity("someone-new", now)).toBeNull();
+    });
+
+    it("retries a quick server error once and recovers", async () => {
+      let userCalls = 0;
+      fetchMock.mockImplementation((url: string) => (url.endsWith("/users/me") && userCalls++ === 0 ? Promise.resolve({ ok: false, status: 503, json: async () => ({}) }) : healthy(url)));
+
+      const activity = await getGithubActivity("me", now);
+
+      expect(activity).toMatchObject({ publicRepos: 12 });
+      expect(userCalls).toBe(2);
+    });
+
+    it("does not retry a rate limit, since waiting a moment would not help", async () => {
+      let userCalls = 0;
+      fetchMock.mockImplementation((url: string) => (url.endsWith("/users/me") ? (userCalls++, Promise.resolve({ ok: false, status: 403, json: async () => ({}) })) : healthy(url)));
+
+      expect(await getGithubActivity("me", now)).toBeNull();
+      expect(userCalls).toBe(1);
+    });
+
+    it("does not retry a timeout, so the home page is not held up twice as long", async () => {
+      let userCalls = 0;
+      fetchMock.mockImplementation((url: string) => (url.endsWith("/users/me") ? (userCalls++, Promise.reject(Object.assign(new Error("timed out"), { name: "TimeoutError" }))) : healthy(url)));
+
+      expect(await getGithubActivity("me", now)).toBeNull();
+      expect(userCalls).toBe(1);
+    });
   });
 
   it("returns null instead of throwing on rate limits, bad shapes and network errors", async () => {

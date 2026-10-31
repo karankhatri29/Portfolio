@@ -4,9 +4,13 @@
 import { neon } from "@neondatabase/serverless";
 import { revalidateTag } from "next/cache";
 
+import { neonBreaker } from "@/lib/db";
+import { recordHeal } from "@/lib/heal";
+
 import { createHighlight, createProject, createSkill, deleteHighlight, deleteProject, deleteSkill, listHighlights, listProjects, listSkills, updateHighlight, updateProject, updateSkill } from "@/lib/content/repository";
 
 jest.mock("@neondatabase/serverless", () => ({ neon: jest.fn() }));
+jest.mock("@/lib/heal", () => ({ recordHeal: jest.fn() }));
 
 const sqlMock = jest.fn();
 const mockNeon = jest.mocked(neon);
@@ -20,6 +24,7 @@ const highlight = { kind: "testimonial" as const, title: "T", subtitle: "S", bod
 
 beforeEach(() => {
   sqlMock.mockReset();
+  neonBreaker.reset();
   mockNeon.mockReturnValue(sqlMock as unknown as ReturnType<typeof neon>);
   env.DATABASE_URL = "postgres://test";
 });
@@ -34,6 +39,31 @@ describe("public list reads", () => {
 
     expect((await listProjects()).map((p) => p.slug)).toEqual(["p"]);
     expect(sqlMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("serve the last good result when the database then goes down, instead of an empty list", async () => {
+    sqlMock.mockResolvedValueOnce([{ id: "1", name: "Kept", description: "d", tools: [] }]);
+    const good = await listSkills();
+
+    sqlMock.mockRejectedValue(new Error("Error connecting to database: TypeError: fetch failed"));
+
+    expect(await listSkills()).toEqual(good);
+    expect(recordHeal).toHaveBeenCalledWith("database", "served-last-good");
+  });
+
+  it("drop the saved copy after an edit, so deleted content never comes back", async () => {
+    sqlMock.mockResolvedValueOnce([{ id: "2", name: "Gone", description: "d", tools: [] }]);
+    await listHighlights();
+    sqlMock.mockResolvedValueOnce([{ id: "9", name: "Skill", description: "d", tools: [] }]);
+    await listSkills();
+
+    const row = { id: "9", name: "Skill", description: "d", tools: [] };
+    sqlMock.mockResolvedValueOnce([row]).mockResolvedValueOnce([row]);
+    await updateSkill("9", { name: "Renamed" });
+    sqlMock.mockReset();
+    sqlMock.mockRejectedValue(new Error("Error connecting to database: TypeError: fetch failed"));
+
+    await expect(listSkills()).rejects.toThrow("fetch failed");
   });
 
   it("map rows for skills and highlights", async () => {

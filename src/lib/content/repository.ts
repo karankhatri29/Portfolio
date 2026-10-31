@@ -1,5 +1,5 @@
 import { invalidateContent, cachedRead } from "@/lib/content/cache";
-import { retryRead, sqlClient } from "@/lib/db";
+import { sqlClient } from "@/lib/db";
 
 import { HIGHLIGHT_KINDS } from "@/lib/content/highlight-kinds";
 import type { HighlightKind } from "@/lib/content/highlight-kinds";
@@ -47,11 +47,11 @@ function toSkill(row: SkillRow): SkillRecord {
   return { id: row.id, name: row.name, description: row.description, tools: row.tools ?? [] };
 }
 
-const readProjects = cachedRead("projects", (): Promise<Project[]> => retryRead(async () => {
+const readProjects = cachedRead("projects", async (): Promise<Project[]> => {
   const sql = sqlClient();
   const rows = (await sql`SELECT slug, title, year, summary, role, outcomes, stack, github_url, problem, approach, result, live_url, video_url, images FROM projects ORDER BY year DESC, title ASC`) as ProjectRow[];
   return rows.map(toProject);
-}));
+});
 
 export const listProjects = (): Promise<Project[]> => readProjects();
 
@@ -95,11 +95,11 @@ export async function deleteProject(slug: string): Promise<boolean> {
   return rows.length > 0;
 }
 
-const readSkills = cachedRead("skills", (): Promise<SkillRecord[]> => retryRead(async () => {
+const readSkills = cachedRead("skills", async (): Promise<SkillRecord[]> => {
   const sql = sqlClient();
   const rows = (await sql`SELECT id, name, description, tools FROM competencies ORDER BY name ASC`) as SkillRow[];
   return rows.map(toSkill);
-}));
+});
 
 export const listSkills = (): Promise<SkillRecord[]> => readSkills();
 
@@ -145,13 +145,13 @@ function toHighlight(row: HighlightRow): Highlight {
   return { id: row.id, kind: row.kind, title: row.title, subtitle: row.subtitle, body: row.body, url: row.url ?? undefined };
 }
 
-const readHighlights = cachedRead("highlights", (kind?: HighlightKind): Promise<Highlight[]> => retryRead(async () => {
+const readHighlights = cachedRead("highlights", async (kind?: HighlightKind): Promise<Highlight[]> => {
   const sql = sqlClient();
   const rows = (kind
     ? await sql`SELECT id, kind, title, subtitle, body, url FROM highlights WHERE kind = ${kind} ORDER BY created_at DESC`
     : await sql`SELECT id, kind, title, subtitle, body, url FROM highlights ORDER BY kind ASC, created_at DESC`) as HighlightRow[];
   return rows.map(toHighlight);
-}));
+});
 
 export const listHighlights = (kind?: HighlightKind): Promise<Highlight[]> => readHighlights(kind);
 

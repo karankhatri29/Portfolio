@@ -134,6 +134,21 @@ async function main() {
   `;
   await sql`CREATE INDEX IF NOT EXISTS error_logs_created_idx ON error_logs (created_at)`;
 
+  // Automatic recoveries (a retry that worked, a fallback that was served), counted in the weekly digest.
+  await sql`
+    CREATE TABLE IF NOT EXISTS heal_events (
+      id BIGSERIAL PRIMARY KEY,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      dependency TEXT NOT NULL,
+      action TEXT NOT NULL
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS heal_events_created_idx ON heal_events (created_at)`;
+
+  // Whether the "new message" email went out. Rows that existed before this column count as sent; new ones start pending.
+  await sql`ALTER TABLE contact_messages ADD COLUMN IF NOT EXISTS notify_state TEXT NOT NULL DEFAULT 'sent'`;
+  await sql`CREATE INDEX IF NOT EXISTS contact_messages_pending_idx ON contact_messages (created_at) WHERE notify_state = 'pending'`;
+
   await sql`
     CREATE TABLE IF NOT EXISTS posts (
       slug TEXT PRIMARY KEY,

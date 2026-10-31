@@ -3,10 +3,12 @@
  */
 import { askGemini } from "@/lib/ask/gemini";
 import { countAsksToday, countRecentAsks, recordAsk } from "@/lib/ask/repository";
+import { recordHeal } from "@/lib/heal";
 
 import { POST } from "./route";
 
 jest.mock("@/lib/ask/gemini", () => ({ askGemini: jest.fn() }));
+jest.mock("@/lib/heal", () => ({ recordHeal: jest.fn() }));
 jest.mock("@/lib/ask/repository", () => ({ countRecentAsks: jest.fn(), countAsksToday: jest.fn(), recordAsk: jest.fn(), pruneOldAsks: jest.fn().mockResolvedValue(undefined) }));
 jest.mock("@/lib/content/repository", () => ({ listProjects: jest.fn().mockResolvedValue([]), listSkills: jest.fn().mockResolvedValue([]) }));
 
@@ -119,6 +121,40 @@ describe("POST /api/ask", () => {
     const blocked = await ask({ question: "What has Karan built?" });
     expect(blocked.status).toBe(200);
     expect(await blocked.json()).toEqual({ answer: "I can only answer questions about Karan and his work." });
+  });
+
+  it("answers from the site's own content when the model is down and the question matches something", async () => {
+    gemini.mockResolvedValue({ ok: false, reason: "unavailable" });
+
+    const response = await ask({ question: "Tell me about the NLP work" });
+
+    expect(response.status).toBe(200);
+    expect((await response.json()).answer).toMatch(/^The AI assistant is unavailable right now/);
+    expect(recordHeal).toHaveBeenCalledWith("gemini", "fallback-answer");
+  });
+
+  it("gives the contact email for hiring questions when the model is over quota", async () => {
+    gemini.mockResolvedValue({ ok: false, reason: "quota" });
+
+    const response = await ask({ question: "Is he open to work?" });
+
+    expect((await response.json()).answer).toMatch(/@/);
+  });
+
+  it("still returns the friendly error when the model is down and nothing on the site matches", async () => {
+    gemini.mockResolvedValue({ ok: false, reason: "unavailable" });
+
+    const response = await ask({ question: "zzzxqv plorp wibble" });
+
+    expect(response.status).toBe(502);
+    expect(recordHeal).not.toHaveBeenCalled();
+  });
+
+  it("notes when the fallback model had to answer", async () => {
+    gemini.mockResolvedValue({ ok: true, text: "From the backup model.", fallback: true });
+
+    expect(await (await ask({ question: "What has Karan built?" })).json()).toEqual({ answer: "From the backup model." });
+    expect(recordHeal).toHaveBeenCalledWith("gemini", "fallback-model");
   });
 
   it("says so plainly when the key is not configured, and never echoes it", async () => {
