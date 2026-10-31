@@ -69,7 +69,7 @@ describe("OpenSource", () => {
     render(<OpenSource activity={activity} />);
 
     expect(screen.getByRole("link", { name: "@karan" })).toHaveAttribute("href", "https://github.com/karan");
-    expect(screen.getByText("1,234")).toBeInTheDocument();
+    expect(screen.getAllByText("1,234")).toHaveLength(2); // the visible number plus the screen-reader copy
     expect(screen.getByText("Public repositories")).toBeInTheDocument();
     const repos = screen.getByRole("list", { name: "Top repositories" });
     expect(within(repos).getByRole("link", { name: "graph-tools" })).toHaveAttribute("target", "_blank");

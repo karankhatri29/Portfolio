@@ -78,3 +78,11 @@ describe("CountUp", () => {
     window.matchMedia = matchMedia;
   });
 });
+
+describe("formatStat grouping", () => {
+  it("adds thousands separators only when asked", () => {
+    expect(formatStat(1234, 0, "", true)).toBe("1,234");
+    expect(formatStat(1234)).toBe("1234");
+    expect(formatStat(1234.5, 1, "k", true)).toBe("1,234.5k");
+  });
+});
