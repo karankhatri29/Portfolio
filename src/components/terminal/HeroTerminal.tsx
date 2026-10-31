@@ -318,7 +318,7 @@ export function HeroTerminal({ children, context }: { children: ReactNode; conte
 
             <div className="flex items-center justify-between gap-4 border-t border-accent/20 bg-accent/10 px-4 py-1.5 text-[11px] leading-4 text-ink/80">
               <span aria-hidden="true" className="hidden shrink-0 text-accent sm:block">[k3] 0:zsh*</span>
-              <p>Answers are written by an LLM and only cover Karan&apos;s work. Please don&apos;t share anything sensitive.</p>
+              <p>Answered by an LLM from Karan&apos;s portfolio only, so it can get things wrong. Please keep personal details out.</p>
             </div>
           </div>
         ) : null}

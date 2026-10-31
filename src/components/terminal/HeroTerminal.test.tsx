@@ -257,7 +257,8 @@ describe("HeroTerminal", () => {
     const { baseElement } = renderTerminal();
     fireEvent.click(openButton());
 
-    expect(screen.getByText(/Answers are written by an LLM and only cover Karan's work/)).toBeInTheDocument();
+    expect(screen.getByText(/Answered by an LLM from Karan's portfolio only, so it can get things wrong/)).toBeInTheDocument();
+    expect(screen.getByText(/keep personal details out/)).toBeInTheDocument();
     expect(baseElement.textContent).not.toMatch(/gemini|google/i);
   });
 });
