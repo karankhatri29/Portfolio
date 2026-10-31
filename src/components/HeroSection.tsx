@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { Fragment } from "react";
 import type { CSSProperties } from "react";
 
 import { NeuralField } from "@/components/NeuralField";
@@ -69,74 +70,87 @@ function TerminalCard({ lines }: { lines: TerminalLine[] }) {
 }
 
 
-const roleSize = "whitespace-nowrap text-[clamp(3.4rem,15vw,11rem)]";
+
+const nameSize = "text-[clamp(3rem,13.5vw,4.25rem)] md:text-[clamp(3rem,7.4vw,6.25rem)]";
+
+// "Integrated M.Tech CSE student / builder" read as a path: connected stops that lead to the role.
+function PathTrail({ steps }: { steps: string[] }) {
+  return (
+    <ol aria-label="Path" className="flex flex-wrap items-center gap-y-2 text-sm font-medium">
+      {steps.map((step, index) => {
+        const last = index === steps.length - 1;
+        return (
+          <li key={step} className="flex items-center">
+            <span className={`flex items-center gap-2.5 ${last ? "text-accent" : "text-muted"}`}>
+              <span aria-hidden="true" className={`h-2.5 w-2.5 rounded-full border ${last ? "border-accent bg-accent shadow-[0_0_12px_2px_rgb(var(--color-accent)/0.7)]" : "border-accent/60 bg-paper"}`} />
+              {step}
+            </span>
+            {last ? null : <span aria-hidden="true" className="mx-3 h-px w-6 bg-gradient-to-r from-accent/20 to-accent/70 sm:w-10" />}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
 
 export function HeroSection({ content, bookingUrl, projects, skills }: { content: PortfolioContent; bookingUrl?: string; projects?: Project[]; skills?: SkillRecord[] }) {
   const [role, ...rest] = content.headline.split(/(?<=\.)\s+/);
   const claim = rest.join(" ");
+  const steps = [...content.eyebrow.split(/\s*\/\s*/), role.replace(/\.$/, "")].filter(Boolean);
+  const words = content.name.split(" ");
 
   return (
-    <section aria-labelledby="hero-title" data-field-host className="relative isolate border-b border-ink/10 pt-8 lg:pt-12">
+    <section aria-labelledby="hero-title" data-field-host className="relative isolate border-b border-ink/10 pb-14 pt-6 lg:pb-20 lg:pt-10">
       <NeuralField className="pointer-events-none absolute inset-y-0 left-1/2 -z-10 h-full w-screen -translate-x-1/2" />
       <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-1/4 bg-gradient-to-t from-paper to-transparent" />
 
-      <div className="relative">
-        <div className="relative h-[32rem] sm:h-[38rem] lg:h-[46rem]">
-          <div className="absolute inset-x-0 top-0 z-30 flex flex-wrap items-start justify-between gap-3">
-            <p className="text-sm font-medium text-muted">{content.eyebrow}</p>
-            {content.availability?.open ? (
-              <p className="inline-flex items-center gap-2.5 rounded-full border border-accent/30 bg-accent/10 py-1.5 pl-3.5 pr-4 text-sm font-medium text-ink backdrop-blur">
-                <span aria-hidden="true" className="relative flex h-2.5 w-2.5">
-                  <span className="absolute inline-flex h-full w-full rounded-full bg-accent opacity-60 motion-safe:animate-ping" />
-                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-accent" />
-                </span>
-                {content.availability.label}
-              </p>
-            ) : null}
-          </div>
-
-          {/* The role is set huge behind the portrait; the claim is shown in the dock below and kept here for assistive tech. */}
-          <h1 id="hero-title" className="absolute inset-x-0 top-[14%] z-10 text-center font-display font-bold leading-none tracking-tighter sm:top-[11%] lg:top-[9%]">
-            {claim ? (
-              <>
-                <span className={`block bg-gradient-to-b from-ink from-45% to-accent bg-clip-text text-transparent ${roleSize}`}>{role}</span>
-                <span className="sr-only"> {claim}</span>
-              </>
-            ) : <span className="block text-4xl sm:text-6xl">{content.headline}</span>}
+      {/* Phones stack: name, photo, text, terminal. From md up it is two columns, with the terminal resting on the photo's corner. */}
+      <div className="grid gap-x-8 gap-y-8 md:grid-cols-[1.15fr_1fr] lg:gap-x-12">
+        <div className="order-1 md:order-none md:col-start-1 md:row-start-1">
+          <PathTrail steps={steps} />
+          <h1 id="hero-title" className={`mt-6 bg-gradient-to-b from-ink from-45% to-accent bg-clip-text font-display font-bold uppercase leading-[0.95] tracking-tight text-transparent ${nameSize}`}>
+            {words.map((word, index) => <Fragment key={`${word}-${index}`}>{index ? " " : null}<span className="block pb-[0.04em]">{word}</span></Fragment>)}
           </h1>
-
-          <div aria-hidden="true" className="absolute bottom-0 left-1/2 z-[12] h-[62%] w-[min(34rem,92%)] -translate-x-1/2 rounded-full bg-accent/25 blur-3xl" />
-
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex h-[70%] justify-center lg:h-[68%] lg:-translate-x-[7%]">
-            <Image
-              src="/karan-khatri-cutout.webp"
-              alt={`${content.name} smiling, in a black suit and tie`}
-              width={458}
-              height={619}
-              priority
-              unoptimized
-              className="h-full w-auto object-contain object-bottom [mask-image:linear-gradient(to_bottom,#000_80%,transparent)]"
-            />
-          </div>
-
         </div>
 
-        <div className="relative z-30 -mt-2 grid gap-8 pb-10 md:grid-cols-2 md:items-start md:gap-10 lg:absolute lg:inset-x-0 lg:bottom-0 lg:mt-0 lg:items-end lg:gap-6 lg:pb-8">
-          <div className="lg:col-start-2 lg:ml-auto lg:max-w-[22rem]">
-            {claim ? <p aria-hidden="true" className="font-display text-2xl font-semibold leading-tight tracking-tight sm:text-3xl lg:text-[1.7rem]">{claim}</p> : null}
-            <p className="mt-4 text-base leading-7 text-muted">{content.summary}</p>
-            <div className="mt-6 grid gap-3 sm:flex sm:flex-wrap sm:items-center">
-              <a href="#contact" className="flex min-h-12 items-center justify-center bg-accent px-6 text-base font-semibold text-paper transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_28px_-6px_rgb(var(--color-accent)/0.6)] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper">Get in touch</a>
-              <Link href="/resume" className="flex min-h-12 items-center justify-center border border-ink/30 bg-paper/40 px-6 text-base font-semibold backdrop-blur transition duration-200 hover:-translate-y-0.5 hover:border-accent hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">View resume</Link>
-              {bookingUrl ? <a href={bookingUrl} target="_blank" rel="noopener noreferrer" data-track="booking" className="flex min-h-12 items-center justify-center border border-ink/30 bg-paper/40 px-6 text-base font-semibold backdrop-blur transition duration-200 hover:-translate-y-0.5 hover:border-accent hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">Book a call</a> : null}
-            </div>
-            <p className="mt-6 max-w-sm border-l border-accent/50 pl-6 text-sm leading-7 text-muted">Selected work, field notes, and practical ideas for making digital products feel more human.</p>
+        <div className="pointer-events-none relative order-2 flex items-end justify-center md:order-none md:col-start-2 md:row-span-2 md:row-start-1 md:pb-[17.5rem]">
+          <div aria-hidden="true" className="absolute bottom-0 left-1/2 h-[75%] w-[min(30rem,100%)] -translate-x-1/2 rounded-full bg-accent/25 blur-3xl md:bottom-[17.5rem] md:h-[60%]" />
+          <Image
+            src="/karan-khatri-cutout.webp"
+            alt={`${content.name} smiling, in a black suit and tie`}
+            width={458}
+            height={619}
+            priority
+            unoptimized
+            className="relative h-[22rem] w-auto object-contain object-bottom [mask-image:linear-gradient(to_bottom,#000_72%,transparent)] sm:h-[26rem] md:h-[27rem] lg:h-[33rem]"
+          />
+        </div>
+
+        <div className="order-3 flex flex-col justify-between gap-8 md:order-none md:col-start-1 md:row-start-2">
+          <div>
+          {claim ? <p className="max-w-xl font-display text-2xl font-semibold leading-tight tracking-tight sm:text-3xl">{claim}</p> : null}
+          <p className="mt-4 max-w-lg text-base leading-7 text-muted">{content.summary}</p>
+          <div className="mt-6 grid gap-3 sm:flex sm:flex-wrap sm:items-center">
+            <a href="#contact" className="flex min-h-12 items-center justify-center bg-accent px-6 text-base font-semibold text-paper transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_28px_-6px_rgb(var(--color-accent)/0.6)] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper">Get in touch</a>
+            <Link href="/resume" className="flex min-h-12 items-center justify-center border border-ink/30 bg-paper/40 px-6 text-base font-semibold backdrop-blur transition duration-200 hover:-translate-y-0.5 hover:border-accent hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">View resume</Link>
+            {bookingUrl ? <a href={bookingUrl} target="_blank" rel="noopener noreferrer" data-track="booking" className="flex min-h-12 items-center justify-center border border-ink/30 bg-paper/40 px-6 text-base font-semibold backdrop-blur transition duration-200 hover:-translate-y-0.5 hover:border-accent hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">Book a call</a> : null}
           </div>
-          <div className="w-full max-w-sm md:max-w-none lg:col-start-1 lg:row-start-1 lg:max-w-[21rem]">
-            <HeroTerminal context={terminalContext(content, projects, skills)}>
-              <TerminalCard lines={content.terminal} />
-            </HeroTerminal>
           </div>
+          {content.availability?.open ? (
+            <p className="inline-flex w-fit items-center gap-2.5 rounded-full border border-accent/30 bg-accent/10 py-1.5 pl-3.5 pr-4 text-sm font-medium text-ink backdrop-blur">
+              <span aria-hidden="true" className="relative flex h-2.5 w-2.5">
+                <span className="absolute inline-flex h-full w-full rounded-full bg-accent opacity-60 motion-safe:animate-ping" />
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-accent" />
+              </span>
+              {content.availability.label}
+            </p>
+          ) : null}
+        </div>
+
+        <div className="relative z-10 order-4 w-full max-w-sm md:order-none md:col-start-2 md:row-start-2 md:max-w-[19rem] md:self-end md:justify-self-center">
+          <HeroTerminal context={terminalContext(content, projects, skills)}>
+            <TerminalCard lines={content.terminal} />
+          </HeroTerminal>
         </div>
       </div>
     </section>

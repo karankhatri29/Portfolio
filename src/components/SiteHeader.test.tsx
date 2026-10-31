@@ -52,6 +52,28 @@ describe("SiteHeader", () => {
     expect(nav()).toHaveClass("hidden");
   });
 
+  it("is transparent at the top of the page and frosted once the page is scrolled", () => {
+    const { container } = renderHeader();
+    const header = container.querySelector("header");
+    expect(header).toHaveClass("bg-transparent");
+
+    Object.defineProperty(window, "scrollY", { value: 120, configurable: true });
+    fireEvent.scroll(window);
+    expect(header).toHaveClass("backdrop-blur-md");
+    expect(header).not.toHaveClass("bg-transparent");
+
+    Object.defineProperty(window, "scrollY", { value: 0, configurable: true });
+    fireEvent.scroll(window);
+    expect(header).toHaveClass("bg-transparent");
+  });
+
+  it("stays frosted while the menu is open, so its links are readable over the hero", () => {
+    const { container } = renderHeader();
+
+    fireEvent.click(screen.getByRole("button", { name: "Open menu" }));
+    expect(container.querySelector("header")).toHaveClass("backdrop-blur-md");
+  });
+
   it("never wraps: the bar has a fixed height at every size", () => {
     const { container } = renderHeader();
 

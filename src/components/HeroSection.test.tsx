@@ -7,22 +7,23 @@ describe("HeroSection", () => {
   it("renders the portfolio introduction from data", () => {
     render(<HeroSection content={portfolioContent} />);
 
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(portfolioContent.headline);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(portfolioContent.name);
+    expect(screen.getByText(portfolioContent.headline.split(/(?<=\.)\s+/).slice(1).join(" "))).toBeInTheDocument();
     expect(screen.getByText(portfolioContent.summary)).toBeInTheDocument();
   });
 
-  it("puts the role on its own line ahead of the claim, without changing the headline text", () => {
+  it("shows the student-to-builder line as a path that ends at the role", () => {
     render(<HeroSection content={portfolioContent} />);
 
-    const heading = screen.getByRole("heading", { level: 1 });
-    expect(within(heading).getByText("AI engineer.")).toHaveClass("block");
-    expect(heading).toHaveTextContent("AI engineer. I make language models useful on real, messy data.");
+    const steps = within(screen.getByRole("list", { name: "Path" })).getAllByRole("listitem");
+    expect(steps.map((step) => step.textContent)).toEqual(["Integrated M.Tech CSE student", "builder", "AI engineer"]);
   });
 
-  it("falls back to the plain headline when it has a single sentence", () => {
+  it("copes with a headline of a single sentence", () => {
     render(<HeroSection content={{ ...portfolioContent, headline: "One sentence only." }} />);
 
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("One sentence only.");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(portfolioContent.name);
+    expect(within(screen.getByRole("list", { name: "Path" })).getByText("One sentence only")).toBeInTheDocument();
   });
 
   it("shows an availability badge only while open, and hides it when closed", () => {

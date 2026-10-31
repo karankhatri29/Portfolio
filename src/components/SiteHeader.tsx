@@ -15,8 +15,17 @@ import type { PortfolioSession } from "@/lib/auth/types";
  */
 export function SiteHeader({ name, links, session }: { name: string; links: { label: string; href: string }[]; session: PortfolioSession | null }) {
   const [open, setOpen] = useState(false);
+  // Transparent over the top of the page, frosted once content scrolls underneath it.
+  const [scrolled, setScrolled] = useState(false);
   const panelId = useId();
   const root = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const update = () => setScrolled(window.scrollY > 8);
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    return () => window.removeEventListener("scroll", update);
+  }, []);
 
   // Escape or a click outside closes the menu, and growing to the desktop layout resets it.
   useEffect(() => {
@@ -38,11 +47,11 @@ export function SiteHeader({ name, links, session }: { name: string; links: { la
   const link = "flex min-h-12 items-center px-5 text-base text-ink/90 transition hover:text-accent focus:outline-none focus-visible:text-accent lg:min-h-0 lg:px-0 lg:text-sm lg:text-muted";
 
   return (
-    <header ref={root} className="sticky top-0 z-40 border-b border-ink/10 bg-paper/75 backdrop-blur-md">
+    <header ref={root} className={`sticky top-0 z-40 border-b transition-[background-color,border-color,backdrop-filter] duration-300 motion-reduce:transition-none ${scrolled || open ? "border-ink/10 bg-paper/75 backdrop-blur-md" : "border-transparent bg-transparent"}`}>
       <div className="mx-auto grid h-16 max-w-6xl grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-5 lg:h-20 lg:grid-cols-[1fr_auto_1fr] lg:px-8">
-        <Link href="/" className="flex min-w-0 items-center gap-3 font-display text-base font-semibold tracking-tight sm:text-lg">
-          <BrandMark size={44} />
-          <span className="truncate">{name}</span>
+        {/* Logo only. The name stays as the logo's accessible name, so assistive technology still announces it. */}
+        <Link href="/" className="flex w-fit items-center rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+          <BrandMark size={48} title={name} />
         </Link>
 
         <nav
