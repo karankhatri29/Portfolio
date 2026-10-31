@@ -4,6 +4,7 @@ import BlogPostPage, { generateMetadata } from "@/app/blog/[slug]/page";
 import { auth } from "@/auth";
 import { getBlogPost, listBlogPosts } from "@/lib/content/blog";
 
+jest.mock("@/lib/analytics/report", () => ({ withReportedFallback: (query: Promise<unknown[]>) => query.catch(() => []) }));
 jest.mock("@/auth", () => ({ auth: jest.fn() }));
 jest.mock("@/lib/content/blog", () => ({ getBlogPost: jest.fn(), listBlogPosts: jest.fn() }));
 jest.mock("@/components/MarkdownContent", () => ({ MarkdownContent: ({ children }: { children: string }) => <div data-testid="markdown">{children}</div> }));

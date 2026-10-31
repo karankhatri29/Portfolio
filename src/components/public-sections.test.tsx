@@ -51,11 +51,13 @@ describe("OpenSource", () => {
   const activity = {
     username: "karan",
     publicRepos: 21,
-    followers: 5,
     totalStars: 1234,
-    topRepos: [
-      { name: "graph-tools", url: "https://github.com/karan/graph-tools", description: "Graph helpers", language: "Python", stars: 1 },
-      { name: "notes", url: "https://github.com/karan/notes", description: "", language: "", stars: 0 },
+    activeRepoCount: 4,
+    commitsLast30Days: 87,
+    pinnedRepos: [],
+    recentRepos: [
+      { name: "graph-tools", url: "https://github.com/karan/graph-tools", description: "Graph helpers", language: "Python", stars: 1, pushedAt: "2026-10-20T10:00:00Z", owner: "karan" },
+      { name: "notes", url: "https://github.com/karan/notes", description: "", language: "", stars: 0, pushedAt: "", owner: "karan" },
     ],
   };
 
@@ -65,15 +67,34 @@ describe("OpenSource", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("shows headline numbers, the profile link and top repositories", () => {
+  it("shows pinned organisation repositories with their owner, and no Pinned group when there are none", () => {
+    const org = { name: "platform", url: "https://github.com/acme/platform", description: "Org repo", language: "Go", stars: 9, pushedAt: "2026-10-20T00:00:00Z", owner: "acme" };
+    const { rerender } = render(<OpenSource activity={{ ...activity, pinnedRepos: [org] }} />);
+
+    expect(within(screen.getByRole("list", { name: "Pinned" })).getByRole("link", { name: "acme/platform" })).toHaveAttribute("href", "https://github.com/acme/platform");
+
+    rerender(<OpenSource activity={{ ...activity, pinnedRepos: [] }} />);
+    expect(screen.queryByRole("list", { name: "Pinned" })).not.toBeInTheDocument();
+  });
+
+  it("hides the commit count when it is unavailable", () => {
+    render(<OpenSource activity={{ ...activity, commitsLast30Days: null }} />);
+
+    expect(screen.queryByText("Commits in last 30 days")).not.toBeInTheDocument();
+    expect(screen.getByText("Active in last 30 days")).toBeInTheDocument();
+  });
+
+  it("shows headline numbers, the profile link and recently updated repositories", () => {
     render(<OpenSource activity={activity} />);
 
     expect(screen.getByRole("link", { name: "@karan" })).toHaveAttribute("href", "https://github.com/karan");
     expect(screen.getAllByText("1,234")).toHaveLength(2); // the visible number plus the screen-reader copy
     expect(screen.getByText("Public repositories")).toBeInTheDocument();
-    const repos = screen.getByRole("list", { name: "Top repositories" });
+    expect(screen.getAllByText("87")).toHaveLength(2);
+    expect(screen.getByText("Commits in last 30 days")).toBeInTheDocument();
+    const repos = screen.getByRole("list", { name: "Currently working on" });
     expect(within(repos).getByRole("link", { name: "graph-tools" })).toHaveAttribute("target", "_blank");
-    expect(within(repos).getByText("Python · 1 star")).toBeInTheDocument();
+    expect(within(repos).getByText("Python · 1 star · updated Oct 20, 2026")).toBeInTheDocument();
     expect(within(repos).getByText("0 stars")).toBeInTheDocument();
   });
 });

@@ -62,15 +62,13 @@ describe("feed.xml", () => {
     expect((await feed()).headers.get("cache-control")).toContain("s-maxage=3600");
   });
 
-  it("still returns a valid, empty feed (not an error) when the posts cannot be loaded, and does not cache it", async () => {
+  it("answers 503 with Retry-After, not an empty feed, when the posts cannot be loaded", async () => {
     mockPosts.mockRejectedValue(new Error("database unavailable"));
 
     const response = await feed();
-    const xml = await response.text();
 
-    expect(response.status).toBe(200);
-    expect(xml).toContain('<rss version="2.0"');
-    expect(xml).not.toContain("<item>");
+    expect(response.status).toBe(503);
+    expect(response.headers.get("retry-after")).toBe("300");
     expect(response.headers.get("cache-control")).toBe("no-store");
   });
 });
