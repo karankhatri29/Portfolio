@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { auth } from "@/auth";
 import { JsonLd } from "@/components/JsonLd";
+import { withReportedFallback } from "@/lib/analytics/report";
 import { MarkdownContent } from "@/components/MarkdownContent";
 import { PostNav } from "@/components/PostNav";
 import { RelatedPosts, relatedPosts } from "@/components/RelatedPosts";
@@ -43,7 +44,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   const isDraft = post.status !== "published";
   const minutes = readingMinutes(post.content);
   const headings = extractHeadings(post.content);
-  const published = await listBlogPosts().catch(() => []);
+  const published = await withReportedFallback(listBlogPosts(), `/blog/${post.slug}`);
   const index = published.findIndex((item) => item.slug === post.slug);
   // The list is newest first, so the entry before this one is the newer post.
   const newer = index > 0 ? published[index - 1] : undefined;

@@ -38,6 +38,16 @@ describe("sendEmail", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("adds Reply-To only when one is given", async () => {
+    fetchMock.mockResolvedValue({ ok: true, status: 200 });
+
+    await sendEmail({ subject: "s", text: "t", replyTo: "visitor@example.com" });
+    await sendEmail({ subject: "s", text: "t" });
+
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).reply_to).toBe("visitor@example.com");
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body)).not.toHaveProperty("reply_to");
+  });
+
   it("posts a plain-text message to the provider and strips newlines from the subject", async () => {
     fetchMock.mockResolvedValue({ ok: true, status: 200 });
 

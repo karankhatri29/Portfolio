@@ -7,6 +7,8 @@ import { sendEmail } from "@/lib/notify/email";
 import { POST } from "./route";
 
 jest.mock("@/lib/analytics/repository", () => ({ countRecentMessages: jest.fn(), createMessage: jest.fn() }));
+// `after` only works inside a real Next.js request, so run the callback straight away.
+jest.mock("next/server", () => ({ ...jest.requireActual("next/server"), after: (callback: () => unknown) => void callback() }));
 jest.mock("@/lib/notify/email", () => ({ sendEmail: jest.fn() }));
 
 const mockCount = jest.mocked(countRecentMessages);
@@ -46,6 +48,20 @@ describe("/api/contact", () => {
     expect(text).toContain("ada@example.com");
     expect(text).toContain(valid.message);
     expect(text).toContain("http://localhost/admin/analytics");
+  });
+
+  it("sets Reply-To to the visitor so the owner can answer from their inbox", async () => {
+    await send(valid);
+
+    expect(mockEmail.mock.calls[0][0].replyTo).toBe("ada@example.com");
+  });
+
+  it("answers the visitor without waiting for the email provider", async () => {
+    mockEmail.mockReturnValue(new Promise(() => undefined));
+
+    const response = await send(valid);
+
+    expect(response.status).toBe(201);
   });
 
   it("still succeeds when the notification email fails", async () => {

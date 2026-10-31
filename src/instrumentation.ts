@@ -15,8 +15,8 @@ export const onRequestError: Instrumentation.onRequestError = async (error, requ
     console.error("server error", report.path, report.message);
     if (!process.env.DATABASE_URL) return;
 
-    const { recordError } = await import("@/lib/analytics/repository");
-    await recordError(report);
+    const { recordAndAlert } = await import("@/lib/analytics/report");
+    await recordAndAlert(report);
   } catch {
     // Monitoring must never cause or mask a request error.
   }

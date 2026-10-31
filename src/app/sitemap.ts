@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 
+import { withReportedFallback } from "@/lib/analytics/report";
 import { listBlogPosts } from "@/lib/content/blog";
 import { listProjects } from "@/lib/content/repository";
 import { siteUrl } from "@/lib/site";
@@ -13,9 +14,8 @@ function parsedDate(value: string): Date | undefined {
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = siteUrl();
-  const posts = await listBlogPosts();
   // The sitemap must still work if the database is briefly unreachable.
-  const projects = await listProjects().catch(() => []);
+  const [posts, projects] = await Promise.all([withReportedFallback(listBlogPosts(), "/sitemap.xml"), withReportedFallback(listProjects(), "/sitemap.xml")]);
 
   // Google ignores priority and changefreq, and only trusts lastmod when it is verifiably accurate,
   // so only posts (which have a real publish date) carry one.
