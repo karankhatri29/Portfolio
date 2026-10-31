@@ -3,12 +3,14 @@
 import { useEffect } from "react";
 
 import { reportClientError } from "@/lib/client-error";
+import { reloadOnceForStaleDeploy } from "@/lib/stale-deploy";
 
 type GlobalErrorProps = { error: Error & { digest?: string }; retry?: () => void; reset?: () => void };
 
 // Replaces the whole document, so it cannot rely on the app's stylesheet.
 export default function GlobalError({ error, retry, reset }: GlobalErrorProps) {
   useEffect(() => {
+    if (reloadOnceForStaleDeploy(error)) return;
     reportClientError(error, error.digest);
   }, [error]);
 

@@ -204,15 +204,39 @@ describe("HeroTerminal", () => {
     expect(box()).not.toBeDisabled();
   });
 
-  it("recovers from a network failure with a generic message", async () => {
-    mockFetch(() => Promise.reject(new Error("offline")));
+  it("retries once after a dropped connection, then shows a generic message", async () => {
+    const fetchMock = mockFetch(() => Promise.reject(new Error("offline")));
     renderTerminal();
     fireEvent.click(openButton());
 
     type("What has Karan built?");
 
-    await waitFor(() => expect(log().getByText(/Something went wrong/)).toBeInTheDocument());
+    await waitFor(() => expect(log().getByText(/Something went wrong/)).toBeInTheDocument(), { timeout: 3000 });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(box()).not.toBeDisabled();
+  });
+
+  it("answers normally when the retry gets through", async () => {
+    let calls = 0;
+    const fetchMock = mockFetch(() => (++calls === 1 ? Promise.reject(new Error("offline")) : reply({ answer: "He built Email Triage." })));
+    renderTerminal();
+    fireEvent.click(openButton());
+
+    type("What has Karan built?");
+
+    await waitFor(() => expect(log().getByText("He built Email Triage.")).toBeInTheDocument(), { timeout: 3000 });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not retry when the server replied with an error", async () => {
+    const fetchMock = mockFetch(() => reply({ error: "Try later." }, false));
+    renderTerminal();
+    fireEvent.click(openButton());
+
+    type("What has Karan built?");
+
+    await waitFor(() => expect(log().getByText("Try later.")).toBeInTheDocument());
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("rejects an over-long question locally instead of calling the assistant", () => {

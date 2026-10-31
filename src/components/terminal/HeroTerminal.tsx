@@ -11,6 +11,7 @@ import type { OutputLine, TerminalContext } from "@/lib/ask/commands";
 
 const MAX_QUESTION = 200;
 const REQUEST_TIMEOUT_MS = 20000;
+const RETRY_DELAY_MS = 1000;
 const GENERIC_ERROR = "Something went wrong. Please try again, or email Karan directly.";
 
 const PROMPT = "karan@k3 ~ %";
@@ -158,7 +159,13 @@ export function HeroTerminal({ children, context }: { children: ReactNode; conte
     const controller = new AbortController();
     const timer = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     try {
-      const response = await fetch("/api/ask", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ question }), signal: controller.signal });
+      const request = () => fetch("/api/ask", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ question }), signal: controller.signal });
+      // One retry, only when the request never got a reply (a dropped connection). A timeout or an error reply is final.
+      const response = await request().catch(async (error: unknown) => {
+        if (controller.signal.aborted) throw error;
+        await new Promise((resolve) => window.setTimeout(resolve, RETRY_DELAY_MS));
+        return request();
+      });
       const data = (await response.json().catch(() => ({}))) as { answer?: string; error?: string };
       if (response.ok && data.answer) add({ kind: "answer", text: data.answer });
       else add({ kind: "error", text: data.error ?? GENERIC_ERROR });

@@ -4,11 +4,13 @@ import Link from "next/link";
 import { useEffect } from "react";
 
 import { reportClientError } from "@/lib/client-error";
+import { reloadOnceForStaleDeploy } from "@/lib/stale-deploy";
 
 type ErrorProps = { error: Error & { digest?: string }; retry?: () => void; reset?: () => void };
 
 export default function ErrorPage({ error, retry, reset }: ErrorProps) {
   useEffect(() => {
+    if (reloadOnceForStaleDeploy(error)) return;
     reportClientError(error, error.digest);
   }, [error]);
 

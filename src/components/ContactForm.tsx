@@ -48,7 +48,7 @@ export function ContactForm() {
       }
       setStatus({ kind: "server", message: typeof data.error === "string" ? data.error : "Something went wrong. Please try again." });
     } catch {
-      setStatus({ kind: "server", message: "Could not reach the server. Please try again." });
+      setStatus({ kind: "server", message: "Could not reach the server. Check your connection and try again." });
     }
   }
 

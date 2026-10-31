@@ -6,10 +6,14 @@ import GlobalError from "@/app/global-error";
 import NotFound from "@/app/not-found";
 import { ClientErrors } from "@/components/ClientErrors";
 import { reportClientError } from "@/lib/client-error";
+import { reloadOnceForStaleDeploy } from "@/lib/stale-deploy";
 
 jest.mock("@/lib/client-error", () => ({ reportClientError: jest.fn() }));
 
+jest.mock("@/lib/stale-deploy", () => ({ reloadOnceForStaleDeploy: jest.fn(() => false) }));
+
 const mockReport = jest.mocked(reportClientError);
+const mockReload = jest.mocked(reloadOnceForStaleDeploy);
 
 describe("error page", () => {
   it("reports the error once, explains it kindly and offers a retry", async () => {
@@ -36,6 +40,22 @@ describe("error page", () => {
     rerender(<ErrorPage error={new Error("x")} />);
     expect(screen.queryByRole("button", { name: "Try again" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Back to home" })).toHaveAttribute("href", "/");
+  });
+});
+
+describe("stale deploy errors", () => {
+  it("reload instead of being reported, but only when the reload is allowed", () => {
+    const error = new Error("Loading chunk 9 failed.");
+    mockReport.mockClear();
+
+    mockReload.mockReturnValueOnce(true);
+    render(<ErrorPage error={error} retry={() => {}} />);
+    expect(mockReload).toHaveBeenCalledWith(error);
+    expect(mockReport).not.toHaveBeenCalled();
+
+    mockReload.mockReturnValueOnce(false);
+    render(<ErrorPage error={error} retry={() => {}} />);
+    expect(mockReport).toHaveBeenCalledWith(error, undefined);
   });
 });
 
