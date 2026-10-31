@@ -16,8 +16,8 @@ export function BarList({ items, emptyText, unit }: { items: BarItem[]; emptyTex
               {item.detail ? ` · ${item.detail}` : ""}
             </span>
           </div>
-          <div className="mt-1 h-2 bg-ink/10" aria-hidden="true">
-            <div className="h-2 bg-accent" style={{ width: `${Math.max((item.value / max) * 100, 2)}%` }} />
+          <div className="mt-1.5 h-2 rounded-full bg-ink/10" aria-hidden="true">
+            <div className="h-2 rounded-full bg-gradient-to-r from-accent/60 to-accent shadow-[0_0_12px_-2px_rgb(var(--color-accent)/0.7)]" style={{ width: `${Math.max((item.value / max) * 100, 2)}%` }} />
           </div>
         </li>
       ))}

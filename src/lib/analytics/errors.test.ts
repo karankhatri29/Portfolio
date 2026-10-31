@@ -6,6 +6,8 @@ describe("shouldIgnoreError", () => {
     expect(shouldIgnoreError("ResizeObserver loop completed with undelivered notifications.", "")).toBe(true);
     expect(shouldIgnoreError("Script error.", "")).toBe(true);
     expect(shouldIgnoreError("The operation was aborted.", "")).toBe(true);
+    expect(shouldIgnoreError("Error invoking postMessage: Java object is gone", "")).toBe(true);
+    expect(shouldIgnoreError("The destination stream closed early.", "")).toBe(true);
   });
 
   it("keeps real errors", () => {

@@ -39,6 +39,13 @@ describe("buildDigest", () => {
     expect(text).toContain("Open the dashboard: https://me.example/admin/analytics");
   });
 
+  it("reports automatic recoveries by dependency, and omits the line when there were none", () => {
+    const withHeals = buildDigest(data(), "https://me.example", {}, [{ dependency: "database", action: "retried", count: 2 }, { dependency: "database", action: "served-last-good", count: 1 }, { dependency: "email", action: "email-resent", count: 1 }]);
+    expect(withHeals.text).toContain("Recovered automatically: 4 times (database 3, email 1)");
+    expect(buildDigest(data(), "https://me.example").text).not.toContain("Recovered automatically");
+    expect(buildDigest(data(), "https://me.example", {}, [{ dependency: "github", action: "retried", count: 1 }]).text).toContain("1 time (github 1)");
+  });
+
   it("flags logged errors and stays silent when there are none", () => {
     expect(buildDigest(data({ errors: { total: 4, groups: [] } }), "https://me.example").text).toContain("Errors: 4 logged");
     expect(buildDigest(data(), "https://me.example").text).not.toContain("Errors:");

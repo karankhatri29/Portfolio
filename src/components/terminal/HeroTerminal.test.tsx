@@ -204,15 +204,39 @@ describe("HeroTerminal", () => {
     expect(box()).not.toBeDisabled();
   });
 
-  it("recovers from a network failure with a generic message", async () => {
-    mockFetch(() => Promise.reject(new Error("offline")));
+  it("retries once after a dropped connection, then shows a generic message", async () => {
+    const fetchMock = mockFetch(() => Promise.reject(new Error("offline")));
     renderTerminal();
     fireEvent.click(openButton());
 
     type("What has Karan built?");
 
-    await waitFor(() => expect(log().getByText(/Something went wrong/)).toBeInTheDocument());
+    await waitFor(() => expect(log().getByText(/Something went wrong/)).toBeInTheDocument(), { timeout: 3000 });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(box()).not.toBeDisabled();
+  });
+
+  it("answers normally when the retry gets through", async () => {
+    let calls = 0;
+    const fetchMock = mockFetch(() => (++calls === 1 ? Promise.reject(new Error("offline")) : reply({ answer: "He built Email Triage." })));
+    renderTerminal();
+    fireEvent.click(openButton());
+
+    type("What has Karan built?");
+
+    await waitFor(() => expect(log().getByText("He built Email Triage.")).toBeInTheDocument(), { timeout: 3000 });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not retry when the server replied with an error", async () => {
+    const fetchMock = mockFetch(() => reply({ error: "Try later." }, false));
+    renderTerminal();
+    fireEvent.click(openButton());
+
+    type("What has Karan built?");
+
+    await waitFor(() => expect(log().getByText("Try later.")).toBeInTheDocument());
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("rejects an over-long question locally instead of calling the assistant", () => {
@@ -253,10 +277,91 @@ describe("HeroTerminal", () => {
     expect(box()).toHaveValue("");
   });
 
-  it("tells visitors what the assistant covers and that answers come from Gemini", () => {
+  it("tells visitors what the assistant covers and that an LLM writes the answers, without naming a provider", () => {
+    const { baseElement } = renderTerminal();
+    fireEvent.click(openButton());
+
+    expect(screen.getByText(/Answered by an LLM from Karan's portfolio only, so it can get things wrong/)).toBeInTheDocument();
+    expect(screen.getByText(/keep personal details out/)).toBeInTheDocument();
+    expect(baseElement.textContent).not.toMatch(/gemini|google/i);
+  });
+});
+
+describe("HeroTerminal as a realistic terminal", () => {
+  it("starts like a real shell: a last-login line, then the welcome", () => {
     renderTerminal();
     fireEvent.click(openButton());
 
-    expect(screen.getByText(/Answers come from Gemini and only cover Karan's work/)).toBeInTheDocument();
+    expect(log().getByText(/^Last login: [A-Z][a-z]{2} [A-Z][a-z]{2} \d{1,2} \d{2}:\d{2}:\d{2} on ttys001$/)).toBeInTheDocument();
+    expect(log().getByText(/I'm Karan's terminal/)).toBeInTheDocument();
+  });
+
+  it("shows a shell prompt before the line you type", () => {
+    renderTerminal();
+    fireEvent.click(openButton());
+    type("whoami");
+
+    const echoed = log().getByText("whoami");
+    expect(echoed.textContent).toBe("karan@k3 ~ %whoami");
+  });
+
+  it("completes a command with Tab, lists the options when several fit, and fills in help on an empty line", async () => {
+    const user = userEvent.setup();
+    renderTerminal();
+    fireEvent.click(openButton());
+    box().focus();
+
+    await user.keyboard("proj{Tab}");
+    expect(box()).toHaveValue("projects");
+
+    await user.clear(box());
+    await user.keyboard("c{Tab}");
+    expect(log().getByText("contact clear")).toBeInTheDocument(); // the two commands starting with c (Testing Library collapses the spacing)
+    expect(box()).toHaveValue("c");
+
+    await user.clear(box());
+    await user.keyboard("{Tab}");
+    expect(box()).toHaveValue("help");
+  });
+
+  it("clears the screen with Ctrl+L and abandons the line with Ctrl+C", async () => {
+    const user = userEvent.setup();
+    renderTerminal();
+    fireEvent.click(openButton());
+    type("help");
+    expect(log().getByText(/Commands:/)).toBeInTheDocument();
+
+    box().focus();
+    await user.keyboard("{Control>}l{/Control}");
+    expect(log().queryByText(/Commands:/)).not.toBeInTheDocument();
+
+    await user.keyboard("half a thou");
+    await user.keyboard("{Control>}c{/Control}");
+    expect(box()).toHaveValue("");
+    expect(log().getByText("half a thou^C")).toBeInTheDocument();
+  });
+
+  it("closes from the red window button", async () => {
+    renderTerminal();
+    fireEvent.click(openButton());
+
+    fireEvent.click(screen.getByRole("button", { name: "Close terminal" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  it("writes an answer out gradually, giving screen readers the whole answer straight away", async () => {
+    jest.useFakeTimers();
+    mockFetch(() => reply({ answer: "He built an email triage framework with spaCy, NetworkX and LangChain over a Gmail knowledge graph." }));
+    renderTerminal();
+    fireEvent.click(openButton());
+    type("what has he built?");
+
+    await act(async () => { await Promise.resolve(); });
+    const full = "He built an email triage framework with spaCy, NetworkX and LangChain over a Gmail knowledge graph.";
+    expect(log().getByText(full)).toHaveClass("sr-only");
+    expect(log().getAllByText((_, node) => node?.getAttribute("aria-hidden") === "true" && (node.textContent ?? "").length < full.length && (node.textContent ?? "").length > 0).length).toBeGreaterThan(0);
+
+    act(() => { jest.advanceTimersByTime(3000); });
+    expect(log().getByText(full)).not.toHaveClass("sr-only");
   });
 });

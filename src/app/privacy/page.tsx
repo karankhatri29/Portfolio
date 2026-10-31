@@ -14,8 +14,8 @@ const email = portfolioContent.contactLinks.find((link) => link.icon === "email"
 export default function PrivacyPage() {
   return (
     <main className="mx-auto max-w-3xl px-5 py-20 lg:px-8 lg:py-32">
-      <p className="text-sm font-semibold uppercase tracking-[0.2em] text-accent">Privacy</p>
-      <h1 className="mt-4 font-display text-5xl font-semibold tracking-tight">Your privacy on this site</h1>
+      <p className="text-sm font-medium text-accent">Privacy</p>
+      <h1 className="mt-3 font-display text-4xl font-semibold tracking-tight sm:text-5xl">Your privacy on this site</h1>
       <p className="mt-6 text-lg leading-8 text-muted">Short version: I count visits so I can see what is useful. I do not use cookies for tracking, I do not store your IP address, and I do not sell or share anything.</p>
 
       <section aria-labelledby="visits" className="mt-14">
@@ -46,7 +46,7 @@ export default function PrivacyPage() {
         <p className="mt-4 leading-7 text-muted">Sign-in exists only for the site owner. It uses Google or GitHub and sets a session cookie that is needed for the login to work.</p>
       </section>
 
-      <p className="mt-16"><Link href="/" className="text-sm font-semibold text-accent underline underline-offset-4">Back to home</Link></p>
+      <p className="mt-16"><Link href="/" className="inline-flex min-h-11 items-center text-sm font-semibold text-accent underline underline-offset-4">Back to home</Link></p>
     </main>
   );
 }

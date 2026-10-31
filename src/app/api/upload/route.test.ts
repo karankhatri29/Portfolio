@@ -9,6 +9,7 @@ import { POST } from "./route";
 
 jest.mock("@/auth", () => ({ auth: jest.fn() }));
 jest.mock("@vercel/blob", () => ({ put: jest.fn() }));
+jest.mock("@/lib/heal", () => ({ recordHeal: jest.fn() }));
 
 const mockAuth = auth as unknown as jest.Mock;
 const mockPut = jest.mocked(put);
@@ -34,6 +35,24 @@ afterAll(() => {
 });
 
 describe("/api/upload", () => {
+  it("retries once when the storage service cannot be reached, and succeeds", async () => {
+    mockPut.mockRejectedValueOnce(new Error("fetch failed")).mockResolvedValueOnce({ url: "https://store.public.blob.vercel-storage.com/uploads/shot-abc.png" } as never);
+
+    const response = await upload(new Uint8Array(PNG));
+
+    expect(response.status).toBe(201);
+    expect(mockPut).toHaveBeenCalledTimes(2);
+  });
+
+  it("gives up with a friendly error after one retry", async () => {
+    const consoleError = jest.spyOn(console, "error").mockImplementation(() => undefined);
+    mockPut.mockRejectedValue(new Error("fetch failed"));
+
+    expect((await upload(new Uint8Array(PNG))).status).toBe(500);
+    expect(mockPut).toHaveBeenCalledTimes(2);
+    consoleError.mockRestore();
+  });
+
   it("rejects signed-out and Visitor sessions before reading the file", async () => {
     mockAuth.mockResolvedValue(null);
     expect((await upload(new Uint8Array(PNG))).status).toBe(401);

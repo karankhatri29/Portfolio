@@ -14,12 +14,14 @@ describe("ContactFooter", () => {
     }
   });
 
-  it("shows readable handles instead of raw URLs", () => {
-    render(<ContactFooter links={portfolioContent.contactLinks} />);
+  it("shows only icons, with the readable handle in each tooltip instead of raw URLs", () => {
+    render(<ContactFooter links={portfolioContent.contactLinks} name={portfolioContent.name} />);
 
-    expect(screen.getByText("karankhatri2924@gmail.com")).toBeInTheDocument();
-    expect(screen.getByText("github.com/karankhatri29")).toBeInTheDocument();
-    expect(screen.getByText("linkedin.com/in/karan-khatri-46729a277")).toBeInTheDocument();
+    const nav = screen.getByRole("navigation", { name: "Contact links" });
+    expect(nav).not.toHaveTextContent(/\S/);
+    expect(screen.getByRole("link", { name: "Email Karan" })).toHaveAttribute("title", "karankhatri2924@gmail.com");
+    expect(screen.getByRole("link", { name: "Karan on GitHub" })).toHaveAttribute("title", "github.com/karankhatri29");
+    expect(screen.getByRole("link", { name: "Karan on LinkedIn" })).toHaveAttribute("title", "linkedin.com/in/karan-khatri-46729a277");
   });
 
   it("opens external profiles safely in a new tab", () => {
@@ -52,6 +54,6 @@ describe("ContactFooter privacy", () => {
     render(<ContactFooter links={portfolioContent.contactLinks} />);
 
     expect(screen.getByRole("link", { name: "Privacy" })).toHaveAttribute("href", "/privacy");
-    expect(screen.getByRole("link", { name: "RSS" })).toHaveAttribute("href", "/feed.xml");
+    expect(screen.getByRole("link", { name: "RSS" })).toHaveAttribute("href", "/rss");
   });
 });

@@ -44,12 +44,16 @@ export type PortfolioContent = {
   eyebrow: string;
   headline: string;
   summary: string;
+  /** A catchier line for the hero. The plain `summary` stays for search results and link previews. */
+  tagline?: string;
   navigation: string[];
   timeline: TimelineItem[];
   contactLinks: ContactLink[];
   about: AboutContent;
   /** Short lines typed out in the hero terminal card; keep each under ~30 characters. */
   terminal: TerminalLine[];
+  /** Commands the hero terminal types and erases on its live prompt. They never run; keep each short. */
+  terminalTeasers?: string[];
   /** Shown as a badge in the hero. Set open to false to hide it. */
   availability?: Availability;
 };
@@ -59,6 +63,7 @@ export const portfolioContent: PortfolioContent = {
   eyebrow: "Integrated M.Tech CSE student / builder",
   headline: "AI engineer. I make language models useful on real, messy data.",
   summary: "Computer science engineer at VIT Vellore working across Python, web systems, NLP, knowledge graphs, and applied AI.",
+  tagline: "Hand me a messy inbox or a noisy dataset and I'll turn it into something that works: NLP, knowledge graphs and clean backends.",
   availability: { open: true, label: "Open to backend and applied AI roles" },
   navigation: ["Work", "Writing", "About", "Contact"],
   timeline: [
@@ -72,6 +77,7 @@ export const portfolioContent: PortfolioContent = {
     { label: "Karan on GitHub", href: "https://github.com/karankhatri29", icon: "github" },
     { label: "Karan on LinkedIn", href: "https://www.linkedin.com/in/karan-khatri-46729a277", icon: "linkedin" },
   ],
+  terminalTeasers: ["cat why-hire-me.md", "ls ~/side-projects", "git log --oneline -3", "./what-next.sh"],
   terminal: [
     { command: "whoami", output: "Karan Kaushik Khatri" },
     { command: "cat focus.txt", output: "backend · data · applied AI" },

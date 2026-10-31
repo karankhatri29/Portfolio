@@ -13,8 +13,8 @@ const config: Config = {
         muted: "rgb(var(--color-muted) / <alpha-value>)",
       },
       fontFamily: {
-        display: ["Georgia", "serif"],
-        sans: ["Trebuchet MS", "sans-serif"],
+        display: ["var(--font-display)", "Georgia", "serif"],
+        sans: ["var(--font-sans)", "Trebuchet MS", "sans-serif"],
       },
     },
   },

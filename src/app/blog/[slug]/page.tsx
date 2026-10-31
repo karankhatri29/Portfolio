@@ -4,13 +4,17 @@ import { notFound } from "next/navigation";
 
 import { auth } from "@/auth";
 import { JsonLd } from "@/components/JsonLd";
+import { withReportedFallback } from "@/lib/analytics/report";
 import { MarkdownContent } from "@/components/MarkdownContent";
 import { PostNav } from "@/components/PostNav";
+import { RelatedPosts, relatedPosts } from "@/components/RelatedPosts";
+import { ReadingProgress } from "@/components/ReadingProgress";
 import { ShareLinks } from "@/components/ShareLinks";
 import { TableOfContents } from "@/components/TableOfContents";
 import { extractHeadings, formatPostDate, readingMinutes } from "@/lib/content/blog-utils";
 import { getBlogPost, listBlogPosts } from "@/lib/content/blog";
-import { SITE_NAME, absoluteUrl } from "@/lib/site";
+import { breadcrumbs, personRef, publisherRef, snippet } from "@/lib/seo";
+import { SITE_NAME, absoluteUrl, siteUrl } from "@/lib/site";
 
 async function loadPost(slug: string) {
   const session = await auth();
@@ -24,10 +28,12 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   return {
     title: post.title,
-    description: post.summary,
+    description: snippet(post.summary),
     alternates: { canonical: `/blog/${post.slug}` },
     robots: post.status === "published" ? undefined : { index: false, follow: false },
-    openGraph: { type: "article", title: post.title, description: post.summary, publishedTime: post.date || undefined, authors: [SITE_NAME], tags: post.tags },
+    keywords: post.tags.length > 0 ? post.tags : undefined,
+    openGraph: { type: "article", url: `/blog/${post.slug}`, title: post.title, description: post.summary, publishedTime: post.date || undefined, modifiedTime: post.date || undefined, authors: [SITE_NAME], tags: post.tags },
+    twitter: { card: "summary_large_image", title: post.title, description: post.summary },
   };
 }
 
@@ -39,7 +45,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   const isDraft = post.status !== "published";
   const minutes = readingMinutes(post.content);
   const headings = extractHeadings(post.content);
-  const published = await listBlogPosts().catch(() => []);
+  const published = await withReportedFallback(listBlogPosts(), `/blog/${post.slug}`);
   const index = published.findIndex((item) => item.slug === post.slug);
   // The list is newest first, so the entry before this one is the newer post.
   const newer = index > 0 ? published[index - 1] : undefined;
@@ -48,6 +54,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
 
   return (
     <main className="mx-auto max-w-3xl px-5 py-16 lg:px-8 lg:py-28">
+      <ReadingProgress />
       <JsonLd
         data={{
           "@context": "https://schema.org",
@@ -56,17 +63,24 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           description: post.summary,
           datePublished: post.date || undefined,
           keywords: post.tags.length > 0 ? post.tags.join(", ") : undefined,
+          dateModified: post.date || undefined,
           timeRequired: `PT${minutes}M`,
-          author: { "@type": "Person", name: SITE_NAME },
-          mainEntityOfPage: url,
+          wordCount: post.content.split(/\s+/).filter(Boolean).length,
+          image: absoluteUrl(`/blog/${post.slug}/opengraph-image`),
+          inLanguage: "en",
+          author: personRef(),
+          publisher: publisherRef(),
+          isPartOf: { "@id": `${siteUrl()}/#website` },
+          mainEntityOfPage: { "@type": "WebPage", "@id": url },
         }}
       />
-      <Link href="/blog" className="text-sm font-semibold text-accent underline underline-offset-4">All writing</Link>
+      {isDraft ? null : <JsonLd data={breadcrumbs([{ name: "Writing", path: "/blog" }, { name: post.title, path: `/blog/${post.slug}` }])} />}
+      <Link href="/blog" className="inline-flex min-h-11 items-center text-sm font-semibold text-accent underline underline-offset-4">All writing</Link>
       {isDraft ? <p role="status" className="mt-6 border border-accent/50 bg-accent/10 p-3 text-sm font-semibold">Draft preview. Visitors cannot see this post until you publish it.</p> : null}
-      <p className="mt-8 text-sm font-semibold uppercase tracking-[0.2em] text-accent">
+      <p className="mt-8 text-sm font-medium text-accent">
         <time dateTime={post.date}>{formatPostDate(post.date)}</time> · {minutes} min read
       </p>
-      <h1 className="mt-5 font-display text-4xl font-semibold tracking-tight sm:text-6xl">{post.title}</h1>
+      <h1 className="mt-4 font-display text-4xl font-semibold leading-[1.08] tracking-tight sm:text-5xl">{post.title}</h1>
       <p className="mt-6 text-xl leading-8 text-muted">{post.summary}</p>
       {post.tags.length > 0 ? (
         <ul aria-label="Tags" className="mt-6 flex flex-wrap gap-2">
@@ -81,6 +95,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         <MarkdownContent>{post.content}</MarkdownContent>
       </article>
       <div className="mt-12 border-t border-ink/10 pt-8"><ShareLinks url={url} title={post.title} /></div>
+      <RelatedPosts posts={relatedPosts(post, published)} />
       <PostNav newer={newer} older={older} />
     </main>
   );

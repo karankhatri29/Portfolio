@@ -96,3 +96,17 @@ it("fails clearly when the database is not configured", async () => {
 
   await expect(listBlogPosts()).rejects.toThrow("DATABASE_URL is not configured");
 });
+
+describe("blog cache invalidation", () => {
+  it("expires the posts tag after create, update and delete", async () => {
+    const { revalidateTag } = jest.requireMock("next/cache") as { revalidateTag: jest.Mock };
+    sqlMock.mockResolvedValue([row()]);
+    const { slug, ...rest } = row() as ReturnType<typeof row> & { slug: string };
+
+    await createPost({ slug, ...rest } as never);
+    await updatePost(slug, rest as never);
+    await deletePost(slug);
+
+    expect(revalidateTag.mock.calls).toEqual([["posts", { expire: 0 }], ["posts", { expire: 0 }], ["posts", { expire: 0 }]]);
+  });
+});
