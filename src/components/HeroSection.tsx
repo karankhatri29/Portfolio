@@ -5,6 +5,7 @@ import type { CSSProperties } from "react";
 
 import { NeuralField } from "@/components/NeuralField";
 import { HeroTerminal } from "@/components/terminal/HeroTerminal";
+import { TeaserLine } from "@/components/terminal/TeaserLine";
 import type { PortfolioContent, TerminalLine } from "@/data/portfolio";
 import type { TerminalContext } from "@/lib/ask/commands";
 import type { Project, SkillRecord } from "@/lib/content/repository";
@@ -44,32 +45,34 @@ function terminalContext(content: PortfolioContent, projects?: Project[], skills
 
 const typed = (text: string, delay: number): CSSProperties => ({ "--n": text.length, "--delay": `${delay}ms` }) as CSSProperties;
 
-function TerminalCard({ lines }: { lines: TerminalLine[] }) {
+const PROMPT = "karan@k3:~$";
+
+function TerminalCard({ lines, teasers }: { lines: TerminalLine[]; teasers?: string[] }) {
   const rows = scheduleTerminal(lines);
 
   return (
-    <div role="group" aria-label="Terminal summary" className="group relative overflow-hidden border border-accent/30 bg-paper/50 font-mono text-[13px] leading-6 shadow-[0_0_44px_-12px_rgb(var(--color-accent)/0.5)] backdrop-blur-xl transition duration-300 hover:border-accent/60 hover:shadow-[0_0_52px_-8px_rgb(var(--color-accent)/0.65)]">
+    <div role="group" aria-label="Terminal summary" className="term-breathe group relative overflow-hidden border border-accent/30 bg-paper/60 font-mono text-[13px] leading-6 shadow-[0_0_44px_-12px_rgb(var(--color-accent)/0.5)] backdrop-blur-xl transition duration-300 hover:border-accent/70 hover:shadow-[0_0_56px_-8px_rgb(var(--color-accent)/0.7)]">
       <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent to-transparent" />
       <div aria-hidden="true" className="flex items-center gap-2 border-b border-ink/10 px-4 py-2.5">
         <span className="h-2.5 w-2.5 rounded-full bg-ink/25" />
         <span className="h-2.5 w-2.5 rounded-full bg-ink/25" />
         <span className="h-2.5 w-2.5 rounded-full bg-ink/25" />
-        <span className="ml-2 text-xs text-muted">~/portfolio</span>
+        <span className="ml-2 text-xs text-muted">karan@k3: ~ — zsh</span>
       </div>
       <div className="space-y-0.5 px-4 py-4">
         {rows.map(({ command, output }) => (
           <div key={command.text}>
-            <p className="flex text-ink"><span aria-hidden="true" className="pr-2 text-accent">$</span><span className="term-line" style={typed(command.text, command.delay)}>{command.text}</span></p>
+            <p className="flex text-ink"><span aria-hidden="true" className="pr-2 text-accent">{PROMPT}</span><span className="term-line" style={typed(command.text, command.delay)}>{command.text}</span></p>
             <p className="term-line text-muted" style={typed(output.text, output.delay)}>{output.text}</p>
           </div>
         ))}
-        <p aria-hidden="true" className="flex text-ink"><span className="pr-2 text-accent">$</span><span className="term-cursor inline-block h-4 w-2 translate-y-1 bg-accent" /></p>
+        {teasers?.length ? <TeaserLine commands={teasers} prompt={PROMPT} /> : (
+          <p aria-hidden="true" className="flex text-ink"><span className="pr-2 text-accent">{PROMPT}</span><span className="term-cursor inline-block h-4 w-2 translate-y-1 bg-accent" /></p>
+        )}
       </div>
     </div>
   );
 }
-
-
 
 const nameSize = "text-[clamp(3rem,13.5vw,4.25rem)] md:text-[clamp(3rem,7.4vw,6.25rem)]";
 
@@ -128,12 +131,12 @@ export function HeroSection({ content, bookingUrl, projects, skills }: { content
 
         <div className="order-3 flex flex-col justify-between gap-8 md:order-none md:col-start-1 md:row-start-2">
           <div>
-          {claim ? <p className="max-w-xl font-display text-2xl font-semibold leading-tight tracking-tight sm:text-3xl">{claim}</p> : null}
-          <p className="mt-4 max-w-lg text-base leading-7 text-muted">{content.summary}</p>
+          {claim ? <p className="max-w-xl font-sans text-2xl font-semibold leading-[1.15] tracking-[-0.03em] sm:text-[1.9rem]">{claim}</p> : null}
+          <p className="mt-4 max-w-lg font-sans text-lg leading-8 tracking-[-0.01em] text-ink/70">{content.tagline ?? content.summary}</p>
           <div className="mt-6 grid gap-3 sm:flex sm:flex-wrap sm:items-center">
-            <a href="#contact" className="flex min-h-12 items-center justify-center bg-accent px-6 text-base font-semibold text-paper transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_28px_-6px_rgb(var(--color-accent)/0.6)] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper">Get in touch</a>
-            <Link href="/resume" className="flex min-h-12 items-center justify-center border border-ink/30 bg-paper/40 px-6 text-base font-semibold backdrop-blur transition duration-200 hover:-translate-y-0.5 hover:border-accent hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">View resume</Link>
-            {bookingUrl ? <a href={bookingUrl} target="_blank" rel="noopener noreferrer" data-track="booking" className="flex min-h-12 items-center justify-center border border-ink/30 bg-paper/40 px-6 text-base font-semibold backdrop-blur transition duration-200 hover:-translate-y-0.5 hover:border-accent hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">Book a call</a> : null}
+            <a href="#contact" className="group inline-flex min-h-12 items-center justify-center gap-2 rounded-full border px-6 text-base font-semibold transition duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper border-accent bg-transparent text-accent hover:bg-accent hover:text-paper hover:shadow-[0_8px_30px_-6px_rgb(var(--color-accent)/0.65)]">Get in touch <span aria-hidden="true" className="transition-transform duration-300 group-hover:translate-x-1">&rarr;</span></a>
+            <Link href="/resume" className="group inline-flex min-h-12 items-center justify-center gap-2 rounded-full border px-6 text-base font-semibold transition duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper border-ink/35 bg-transparent text-ink hover:border-ink hover:bg-ink hover:text-paper">View resume <span aria-hidden="true" className="transition-transform duration-300 group-hover:translate-x-1">&rarr;</span></Link>
+            {bookingUrl ? <a href={bookingUrl} target="_blank" rel="noopener noreferrer" data-track="booking" className="group inline-flex min-h-12 items-center justify-center gap-2 rounded-full border px-6 text-base font-semibold transition duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper border-ink/35 bg-transparent text-ink hover:border-ink hover:bg-ink hover:text-paper">Book a call <span aria-hidden="true" className="transition-transform duration-300 group-hover:translate-x-1">&rarr;</span></a> : null}
           </div>
           </div>
           {content.availability?.open ? (
@@ -149,7 +152,7 @@ export function HeroSection({ content, bookingUrl, projects, skills }: { content
 
         <div className="relative z-10 order-4 w-full max-w-sm md:order-none md:col-start-2 md:row-start-2 md:max-w-[19rem] md:self-end md:justify-self-center">
           <HeroTerminal context={terminalContext(content, projects, skills)}>
-            <TerminalCard lines={content.terminal} />
+            <TerminalCard lines={content.terminal} teasers={content.terminalTeasers} />
           </HeroTerminal>
         </div>
       </div>

@@ -9,6 +9,12 @@ describe("HeroSection", () => {
 
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(portfolioContent.name);
     expect(screen.getByText(portfolioContent.headline.split(/(?<=\.)\s+/).slice(1).join(" "))).toBeInTheDocument();
+    expect(screen.getByText(portfolioContent.tagline ?? portfolioContent.summary)).toBeInTheDocument();
+  });
+
+  it("shows the plain summary when there is no catchy tagline", () => {
+    render(<HeroSection content={{ ...portfolioContent, tagline: undefined }} />);
+
     expect(screen.getByText(portfolioContent.summary)).toBeInTheDocument();
   });
 
@@ -170,5 +176,28 @@ describe("HeroSection layout", () => {
 
     expect(screen.queryByText("Python")).not.toBeInTheDocument();
     expect(screen.queryByText("NLP")).not.toBeInTheDocument();
+  });
+});
+
+describe("HeroSection terminal card", () => {
+  it("never tells visitors to click: no label, just a realistic session and one accessible control over the card", () => {
+    render(<HeroSection content={portfolioContent} />);
+
+    expect(screen.queryByText("Ask")).not.toBeInTheDocument();
+    const control = screen.getByRole("button", { name: /open the interactive terminal/i });
+    expect(control).toBeEmptyDOMElement();
+    expect(control.className).toContain("inset-0");
+  });
+
+  it("shows a shell prompt before every command", () => {
+    const { container } = render(<HeroSection content={portfolioContent} />);
+
+    const prompts = [...container.querySelectorAll("[role='group'] span")].filter((node) => node.textContent === "karan@k3:~$");
+    expect(prompts.length).toBeGreaterThanOrEqual(portfolioContent.terminal.length);
+  });
+
+  it("keeps the hanging commands short enough to fit the card", () => {
+    for (const command of portfolioContent.terminalTeasers ?? []) expect(command.length).toBeLessThanOrEqual(24);
+    expect((portfolioContent.terminalTeasers ?? []).length).toBeGreaterThan(1);
   });
 });

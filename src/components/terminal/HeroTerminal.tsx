@@ -150,12 +150,8 @@ export function HeroTerminal({ children, context }: { children: ReactNode; conte
         type="button"
         onClick={openTerminal}
         aria-label="Open the interactive terminal and ask Karan a question"
-        className="absolute right-3 top-2 z-10 flex items-center gap-1.5 rounded-full border border-accent/40 px-2.5 py-1 font-mono text-[11px] font-semibold text-accent transition hover:bg-accent hover:text-paper focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-      >
-        <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-accent motion-safe:animate-pulse" />
-        Ask
-        <span aria-hidden="true">↗</span>
-      </button>
+        className="absolute inset-0 z-10 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+      />
 
       <dialog
         ref={dialog}
