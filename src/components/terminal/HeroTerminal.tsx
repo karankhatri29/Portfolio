@@ -13,8 +13,22 @@ const MAX_QUESTION = 200;
 const REQUEST_TIMEOUT_MS = 20000;
 const GENERIC_ERROR = "Something went wrong. Please try again, or email Karan directly.";
 
+const PROMPT = "karan@k3 ~ %";
+// The built-in commands, for Tab completion.
+const COMMANDS = ["help", "whoami", "skills", "projects", "contact", "clear", "exit"];
+
 // Kept outside the component: reading the clock is fine in event handlers, but not while rendering.
 const timestamp = () => Date.now();
+
+const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** "Last login: Sat Nov  1 21:04:12 on ttys001": the line a real shell prints when it starts. */
+function loginBanner(at: number) {
+  const date = new Date(at);
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `Last login: ${DAYS[date.getDay()]} ${MONTHS[date.getMonth()]} ${String(date.getDate()).padStart(2, " ")} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())} on ttys001`;
+}
 
 type Entry = { id: number; kind: "input" | "output" | "answer" | "error"; text?: string; lines?: OutputLine[] };
 
@@ -24,7 +38,7 @@ const WELCOME: OutputLine[] = [
 ];
 
 function renderLine(line: OutputLine, closeTerminal: () => void, key: number) {
-  if (line.kind === "text") return <p key={key} className="whitespace-pre-wrap text-muted">{line.text}</p>;
+  if (line.kind === "text") return <p key={key} className="whitespace-pre-wrap text-ink/75">{line.text}</p>;
   const style = "text-accent underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent";
   if (line.href.startsWith("/") || line.href.startsWith("#")) {
     return <p key={key}><Link href={line.href} onClick={closeTerminal} className={style}>{line.text}</Link></p>;
@@ -33,14 +47,56 @@ function renderLine(line: OutputLine, closeTerminal: () => void, key: number) {
   return <p key={key}><a href={line.href} {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})} className={style}>{line.text}</a></p>;
 }
 
+const prefersReducedMotion = () => typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
 /**
- * Wraps the hero's terminal card. Tapping the card (or its Ask button) opens a large dialog where
- * built-in commands answer instantly and any other line is sent to the assistant.
+ * An answer from the assistant, written out as if it were streaming in. Screen readers get the whole answer at once from a
+ * hidden copy; once the writing finishes (or with reduced motion) only the plain text remains.
+ */
+function TypedText({ text }: { text: string }) {
+  const [shown, setShown] = useState(0);
+  const instant = prefersReducedMotion();
+
+  useEffect(() => {
+    if (instant) return;
+    const perTick = Math.max(1, Math.ceil(text.length / 150)); // long answers speed up, so none takes more than a couple of seconds
+    let count = 0;
+    const timer = setInterval(() => {
+      count = Math.min(text.length, count + perTick);
+      setShown(count);
+      if (count >= text.length) clearInterval(timer);
+    }, 16);
+    return () => clearInterval(timer);
+  }, [text, instant]);
+
+  if (instant || shown >= text.length) return <>{text}</>;
+  return (
+    <>
+      <span className="sr-only">{text}</span>
+      <span aria-hidden="true">{text.slice(0, shown)}<span className="term-cursor ml-px inline-block h-3.5 w-2 translate-y-0.5 bg-accent" /></span>
+    </>
+  );
+}
+
+const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+
+function Spinner() {
+  const [frame, setFrame] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => setFrame((current) => (current + 1) % SPINNER_FRAMES.length), 80);
+    return () => clearInterval(timer);
+  }, []);
+  return <span aria-hidden="true" className="text-accent">{SPINNER_FRAMES[frame]}</span>;
+}
+
+/**
+ * Wraps the hero's terminal card. Tapping the card opens a large, realistic terminal: built-in commands answer
+ * instantly, Tab completes them, and any other line is sent to the assistant.
  */
 export function HeroTerminal({ children, context }: { children: ReactNode; context: TerminalContext }) {
   const titleId = useId();
   const dialog = useRef<HTMLDialogElement>(null);
-  const log = useRef<HTMLDivElement>(null);
+  const scroller = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const nextId = useRef(0);
   const history = useRef<{ items: string[]; cursor: number }>({ items: [], cursor: 0 });
@@ -78,12 +134,15 @@ export function HeroTerminal({ children, context }: { children: ReactNode; conte
     return () => window.clearInterval(timer);
   }, [pendingSince]);
 
+  // Like a real terminal, the newest line (and the prompt under it) stays in view.
   useEffect(() => {
-    if (log.current) log.current.scrollTop = log.current.scrollHeight;
+    if (scroller.current) scroller.current.scrollTop = scroller.current.scrollHeight;
   }, [entries, pendingSince, open]);
 
   function openTerminal() {
-    if (!entries.length) setEntries(WELCOME.map((line) => ({ id: nextId.current++, kind: "output", lines: [line] })));
+    if (!entries.length) {
+      setEntries([{ id: nextId.current++, kind: "output", lines: [{ kind: "text", text: loginBanner(timestamp()) }, ...WELCOME] }]);
+    }
     setOpen(true);
   }
 
@@ -132,7 +191,40 @@ export function HeroTerminal({ children, context }: { children: ReactNode; conte
     submit(input);
   }
 
+  // Tab, like a shell: finish a command name, list the options when several fit, or fill in "help" on an empty line.
+  function complete() {
+    const word = input.trim().toLowerCase();
+    if (!word) {
+      setInput("help");
+      return;
+    }
+    if (/\s/.test(word)) return;
+    const matches = COMMANDS.filter((command) => command.startsWith(word));
+    if (matches.length === 1) setInput(matches[0]);
+    else if (matches.length > 1) {
+      add({ kind: "input", text: input });
+      add({ kind: "output", lines: [{ kind: "text", text: matches.join("   ") }] });
+    }
+  }
+
   function onKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.ctrlKey && event.key.toLowerCase() === "l") {
+      event.preventDefault();
+      setEntries([]);
+      return;
+    }
+    // Ctrl+C abandons the line, as in a shell, unless text is selected (then the browser should copy it).
+    if (event.ctrlKey && event.key.toLowerCase() === "c" && inputRef.current?.selectionStart === inputRef.current?.selectionEnd) {
+      event.preventDefault();
+      if (input) add({ kind: "input", text: `${input}^C` });
+      setInput("");
+      return;
+    }
+    if (event.key === "Tab") {
+      event.preventDefault();
+      complete();
+      return;
+    }
     const { items, cursor } = history.current;
     if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
     event.preventDefault();
@@ -142,6 +234,10 @@ export function HeroTerminal({ children, context }: { children: ReactNode; conte
   }
 
   const closeTerminal = () => setOpen(false);
+  // Clicking anywhere on the screen puts the cursor back on the prompt, unless the visitor is selecting text to copy.
+  const focusPrompt = () => {
+    if (!window.getSelection()?.toString()) inputRef.current?.focus();
+  };
 
   return (
     <div className="relative">
@@ -163,45 +259,35 @@ export function HeroTerminal({ children, context }: { children: ReactNode; conte
         }}
       >
         {open ? (
-          <div className="flex h-full flex-col overflow-hidden border border-ink/15 bg-paper font-mono text-sm shadow-2xl shadow-black/60">
-            <div className="flex items-center gap-2 border-b border-ink/10 px-4 py-3">
-              <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-ink/25" />
-              <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-ink/25" />
-              <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-ink/25" />
-              <h2 id={titleId} className="ml-2 text-xs font-normal text-muted">karan@portfolio: ask</h2>
-              <button type="button" onClick={closeTerminal} aria-label="Close terminal" className="ml-auto rounded px-2 py-1 text-xs text-muted transition hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
-                Esc ✕
+          <div className="flex h-full flex-col overflow-hidden border border-accent/25 bg-[#05080c] font-mono text-sm shadow-[0_0_90px_-20px_rgb(var(--color-accent)/0.55)]">
+            <div className="flex items-center gap-2 border-b border-ink/10 bg-ink/[0.045] px-4 py-2.5">
+              <button type="button" onClick={closeTerminal} aria-label="Close terminal" className="group -m-2 flex h-8 w-8 items-center justify-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+                <span aria-hidden="true" className="h-3 w-3 rounded-full bg-[#ff5f57] transition group-hover:brightness-125" />
               </button>
+              <span aria-hidden="true" className="h-3 w-3 rounded-full bg-[#febc2e]/45" />
+              <span aria-hidden="true" className="h-3 w-3 rounded-full bg-[#28c840]/45" />
+              <h2 id={titleId} className="ml-3 text-xs font-normal text-muted">karan@k3: ~/portfolio</h2>
             </div>
 
-            <div ref={log} role="log" aria-live="polite" aria-label="Terminal output" className="flex-1 space-y-2 overflow-y-auto px-5 py-4 leading-6">
-              {entries.map((entry) => {
-                if (entry.kind === "input") return <p key={entry.id} className="text-ink"><span aria-hidden="true" className="pr-2 text-accent">$</span>{entry.text}</p>;
-                if (entry.kind === "answer") return <p key={entry.id} className="border-l-2 border-accent/60 pl-3 text-ink">{entry.text}</p>;
-                if (entry.kind === "error") return <p key={entry.id} className="text-muted"><span aria-hidden="true">! </span>{entry.text}</p>;
-                return <div key={entry.id} className="space-y-0.5">{entry.lines?.map((line, index) => renderLine(line, closeTerminal, index))}</div>;
-              })}
-              {pending ? (
-                <p role="status" className="text-muted">
-                  <span className="sr-only">Working on an answer</span>
-                  <span aria-hidden="true">{loadingPhrase(now - (pendingSince ?? now))}<span className="term-cursor ml-1 inline-block h-3.5 w-2 translate-y-0.5 bg-accent" /></span>
-                </p>
-              ) : null}
-            </div>
+            <div ref={scroller} onClick={focusPrompt} className="flex-1 overflow-y-auto px-5 py-4 leading-[1.65] selection:bg-accent/30">
+              <div role="log" aria-live="polite" aria-label="Terminal output" className="space-y-2">
+                {entries.map((entry) => {
+                  if (entry.kind === "input") return <p key={entry.id} className="text-ink"><span aria-hidden="true" className="pr-2 text-accent">{PROMPT}</span>{entry.text}</p>;
+                  if (entry.kind === "answer") return <p key={entry.id} className="border-l-2 border-accent/60 pl-3 text-ink"><TypedText text={entry.text ?? ""} /></p>;
+                  if (entry.kind === "error") return <p key={entry.id} className="text-[#ff8a80]"><span aria-hidden="true">! </span>{entry.text}</p>;
+                  return <div key={entry.id} className="space-y-0.5">{entry.lines?.map((line, index) => renderLine(line, closeTerminal, index))}</div>;
+                })}
+                {pending ? (
+                  <p role="status" className="text-ink/75">
+                    <span className="sr-only">Working on an answer</span>
+                    <span aria-hidden="true"><Spinner /> {loadingPhrase(now - (pendingSince ?? now))}</span>
+                  </p>
+                ) : null}
+              </div>
 
-            <div className="border-t border-ink/10 px-5 pb-4 pt-3">
-              <ul aria-label="Suggested questions" className="mb-3 flex flex-wrap gap-2">
-                {SUGGESTIONS.map((suggestion) => (
-                  <li key={suggestion}>
-                    <button type="button" disabled={pending} onClick={() => submit(suggestion)} className="rounded-full border border-ink/15 px-3 py-1 text-xs text-muted transition hover:border-accent hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-40">
-                      {suggestion}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-              <form onSubmit={onSubmit} className="flex items-center gap-2">
+              <form onSubmit={onSubmit} className="mt-2 flex items-center gap-2">
                 <label htmlFor={`${titleId}-input`} className="sr-only">Type a command or ask a question about Karan</label>
-                <span aria-hidden="true" className="text-accent">$</span>
+                <span aria-hidden="true" className="shrink-0 text-accent">{PROMPT}</span>
                 <input
                   id={`${titleId}-input`}
                   ref={inputRef}
@@ -215,10 +301,24 @@ export function HeroTerminal({ children, context }: { children: ReactNode; conte
                   spellCheck={false}
                   enterKeyHint="send"
                   placeholder={pending ? "" : "help, or ask about Karan's work…"}
-                  className="min-w-0 flex-1 bg-transparent text-ink placeholder:text-muted/60 focus:outline-none disabled:opacity-60"
+                  className="min-w-0 flex-1 bg-transparent text-ink caret-accent [caret-shape:block] placeholder:text-muted/50 focus:outline-none disabled:opacity-60"
                 />
               </form>
-              <p className="mt-3 text-[11px] leading-4 text-muted">Answers come from Gemini and only cover Karan&apos;s work. Please don&apos;t share anything sensitive.</p>
+            </div>
+
+            <ul aria-label="Suggested questions" className="flex gap-2 overflow-x-auto border-t border-ink/10 px-4 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {SUGGESTIONS.map((suggestion) => (
+                <li key={suggestion} className="shrink-0">
+                  <button type="button" disabled={pending} onClick={() => submit(suggestion)} className="whitespace-nowrap rounded border border-ink/15 px-3 py-1.5 text-xs text-muted transition hover:border-accent hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-40">
+                    {suggestion}
+                  </button>
+                </li>
+              ))}
+            </ul>
+
+            <div className="flex items-center justify-between gap-4 border-t border-accent/20 bg-accent/10 px-4 py-1.5 text-[11px] leading-4 text-ink/80">
+              <span aria-hidden="true" className="hidden shrink-0 text-accent sm:block">[k3] 0:zsh*</span>
+              <p>Answers are written by an LLM and only cover Karan&apos;s work. Please don&apos;t share anything sensitive.</p>
             </div>
           </div>
         ) : null}

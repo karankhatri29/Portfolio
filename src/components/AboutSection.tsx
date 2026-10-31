@@ -43,17 +43,17 @@ export function AboutSection({ about, now }: { about: AboutContent; now?: Date }
 
       <div className="mt-16">
         <h3 className="font-display text-2xl font-semibold tracking-tight">How I work</h3>
-        <ul aria-label="Working principles" className="mt-6 border-t border-ink/10">
+        <ul aria-label="Working principles" className="mt-6 grid gap-4 sm:grid-cols-2">
           {about.principles.map((principle) => {
             const evidence = about.proof.find((item) => item.principle === principle);
             return (
-              <li key={principle} className="group relative grid items-center gap-4 border-b border-ink/10 py-6 transition-colors hover:bg-accent/[0.04] md:grid-cols-[1.2fr_1fr] md:gap-10 md:px-3">
-                <p className="font-display text-xl font-semibold leading-snug sm:text-2xl">{principle}</p>
+              <li key={principle} className={`${glass} group relative flex flex-col justify-between gap-6 p-5 transition duration-300 hover:-translate-y-1 hover:border-accent/60 hover:shadow-[0_0_44px_-12px_rgb(var(--color-accent)/0.5)] motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:p-6`}>
+                <p className="font-display text-xl font-semibold leading-snug">{principle}</p>
                 {evidence ? (
-                  <Link href={evidence.href} className="flex min-h-11 items-center justify-between gap-4 text-sm after:absolute after:inset-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+                  <Link href={evidence.href} className="flex min-h-11 items-center justify-between gap-4 border-t border-ink/10 pt-4 text-sm after:absolute after:inset-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
                     <span>
                       <span className="block text-xs font-semibold text-accent">Proof</span>
-                      <span className="mt-1 block text-base text-muted transition-colors group-hover:text-ink">{evidence.proof}</span>
+                      <span className="mt-1 block text-muted transition-colors group-hover:text-ink">{evidence.proof}</span>
                     </span>
                     <span aria-hidden="true" className="text-lg text-accent transition-transform group-hover:translate-x-1">&rarr;</span>
                   </Link>
