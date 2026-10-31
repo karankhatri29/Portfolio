@@ -6,7 +6,8 @@ import type { FormEvent, KeyboardEvent, ReactNode } from "react";
 import { ImageUploadButton } from "@/components/ImageUploadButton";
 
 import type { Highlight, HighlightKind, Project, SkillRecord } from "@/lib/content/repository";
-import { IconButton, dangerButton } from "@/components/IconButton";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { IconButton } from "@/components/IconButton";
 
 type Status =
   | { kind: "idle" }
@@ -117,9 +118,7 @@ function ProjectEditor({ initialProjects }: { initialProjects: Project[] }) {
               <span><span className="font-semibold">{project.title}</span> <span className="text-sm text-muted">({project.slug})</span></span>
               <span className="flex flex-wrap gap-2">
                 <IconButton kind="edit" label={`Edit ${project.title}`} onClick={() => startEdit(project)} />
-                {confirmingSlug === project.slug
-                  ? <button type="button" className={dangerButton} onClick={() => remove(project.slug)}>Confirm delete {project.title}</button>
-                  : <IconButton kind="delete" label={`Delete ${project.title}`} onClick={() => setConfirmingSlug(project.slug)} />}
+                <IconButton kind="delete" label={`Delete ${project.title}`} onClick={() => setConfirmingSlug(project.slug)} />
               </span>
             </li>
           ))}
@@ -183,6 +182,7 @@ function ProjectEditor({ initialProjects }: { initialProjects: Project[] }) {
         </div>
       </form>
     </div>
+      <ConfirmDialog name={projects.find((item) => item.slug === confirmingSlug)?.title ?? null} onConfirm={() => confirmingSlug && remove(confirmingSlug)} onCancel={() => setConfirmingSlug(null)} />
     </section>
   );
 }
@@ -244,9 +244,7 @@ function SkillEditor({ initialSkills }: { initialSkills: SkillRecord[] }) {
               <span className="font-semibold">{skill.name}</span>
               <span className="flex flex-wrap gap-2">
                 <IconButton kind="edit" label={`Edit ${skill.name}`} onClick={() => startEdit(skill)} />
-                {confirmingId === skill.id
-                  ? <button type="button" className={dangerButton} onClick={() => remove(skill.id)}>Confirm delete {skill.name}</button>
-                  : <IconButton kind="delete" label={`Delete ${skill.name}`} onClick={() => setConfirmingId(skill.id)} />}
+                <IconButton kind="delete" label={`Delete ${skill.name}`} onClick={() => setConfirmingId(skill.id)} />
               </span>
             </li>
           ))}
@@ -271,6 +269,7 @@ function SkillEditor({ initialSkills }: { initialSkills: SkillRecord[] }) {
         </div>
       </form>
     </div>
+      <ConfirmDialog name={skills.find((item) => item.id === confirmingId)?.name ?? null} onConfirm={() => confirmingId && remove(confirmingId)} onCancel={() => setConfirmingId(null)} />
     </section>
   );
 }
@@ -338,9 +337,7 @@ function HighlightEditor({ initialHighlights }: { initialHighlights: Highlight[]
               <span><span className="font-semibold">{item.title}</span> <span className="text-sm text-muted">({item.kind})</span></span>
               <span className="flex flex-wrap gap-2">
                 <IconButton kind="edit" label={`Edit ${item.title}`} onClick={() => startEdit(item)} />
-                {confirmingId === item.id
-                  ? <button type="button" className={dangerButton} onClick={() => remove(item.id)}>Confirm delete {item.title}</button>
-                  : <IconButton kind="delete" label={`Delete ${item.title}`} onClick={() => setConfirmingId(item.id)} />}
+                <IconButton kind="delete" label={`Delete ${item.title}`} onClick={() => setConfirmingId(item.id)} />
               </span>
             </li>
           ))}
@@ -374,6 +371,7 @@ function HighlightEditor({ initialHighlights }: { initialHighlights: Highlight[]
         </div>
       </form>
     </div>
+      <ConfirmDialog name={items.find((item) => item.id === confirmingId)?.title ?? null} onConfirm={() => confirmingId && remove(confirmingId)} onCancel={() => setConfirmingId(null)} />
     </section>
   );
 }

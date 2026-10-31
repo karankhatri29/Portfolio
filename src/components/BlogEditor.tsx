@@ -8,7 +8,8 @@ import { ImageUploadButton } from "@/components/ImageUploadButton";
 import { MarkdownContent } from "@/components/MarkdownContent";
 import { formatPostDate, readingMinutes } from "@/lib/content/blog-utils";
 import type { BlogPost, PostStatus } from "@/lib/content/blog";
-import { IconButton, dangerButton } from "@/components/IconButton";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { IconButton } from "@/components/IconButton";
 
 type Status =
   | { kind: "idle" }
@@ -107,14 +108,13 @@ export function BlogEditor({ initialPosts }: { initialPosts: BlogPost[] }) {
                 <span className="flex gap-4">
                   <Link href={`/blog/${post.slug}`} className={linkButton}>{post.status === "published" ? "View" : "Preview"} <span className="sr-only">{post.title}</span></Link>
                   <IconButton kind="edit" label={`Edit ${post.title}`} onClick={() => startEdit(post)} />
-                  {confirmingSlug === post.slug
-                    ? <button type="button" className={dangerButton} onClick={() => remove(post.slug)}>Confirm delete {post.title}</button>
-                    : <IconButton kind="delete" label={`Delete ${post.title}`} onClick={() => setConfirmingSlug(post.slug)} />}
+                  <IconButton kind="delete" label={`Delete ${post.title}`} onClick={() => setConfirmingSlug(post.slug)} />
                 </span>
               </li>
             ))}
           </ul>
         ) : <p className="mt-6 text-muted">No posts yet.</p>}
+        <ConfirmDialog name={posts.find((item) => item.slug === confirmingSlug)?.title ?? null} onConfirm={() => confirmingSlug && remove(confirmingSlug)} onCancel={() => setConfirmingSlug(null)} />
       </section>
 
       <form onSubmit={submit} className="mt-10 grid gap-4" aria-label={editingSlug ? "Edit post" : "New post"}>

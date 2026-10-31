@@ -78,3 +78,8 @@ body::before {
   animation: name-in 1.15s cubic-bezier(0.22, 1, 0.36, 1) var(--delay) both;
 }
 @media (prefers-reduced-motion: reduce) { .name-in { animation: none; -webkit-mask-image: none; mask-image: none; } }
+
+/* The "message sent" notification slides up into place. */
+@keyframes toast-in { from { opacity: 0; transform: translate(-50%, 14px); } }
+.toast-in { animation: toast-in 0.35s ease-out; }
+@media (prefers-reduced-motion: reduce) { .toast-in { animation: none; } }

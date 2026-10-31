@@ -1,6 +1,7 @@
 /**
  * @jest-environment node
  */
+import { listBlogPosts } from "@/lib/content/blog";
 import { listProjects } from "@/lib/content/repository";
 
 import { GET as feed } from "./feed.xml/route";
@@ -8,14 +9,14 @@ import robots from "./robots";
 import sitemap from "./sitemap";
 
 jest.mock("@/lib/content/repository", () => ({ listProjects: jest.fn() }));
-jest.mock("@/lib/content/blog", () => ({
-  listBlogPosts: async () => [{ slug: "hello", title: "Hello", summary: "Hi", date: "2026-09-01" }, { slug: "odd", title: "Odd", summary: "s", date: "not a date" }],
-}));
+jest.mock("@/lib/content/blog", () => ({ listBlogPosts: jest.fn() }));
 
 const mockProjects = jest.mocked(listProjects);
+const mockPosts = jest.mocked(listBlogPosts);
 const env = process.env as Record<string, string | undefined>;
 
 beforeEach(() => {
+  mockPosts.mockResolvedValue([{ slug: "hello", title: "Hello", summary: "Hi", date: "2026-09-01" }, { slug: "odd", title: "Odd", summary: "s", date: "not a date" }] as never);
   env.NEXT_PUBLIC_SITE_URL = "https://karan.dev";
 });
 
@@ -55,5 +56,21 @@ describe("feed.xml", () => {
 
     expect(response.headers.get("content-type")).toBe("application/rss+xml; charset=utf-8");
     expect(await response.text()).toContain("<link>https://karan.dev/blog/hello</link>");
+  });
+
+  it("is cached when the posts loaded", async () => {
+    expect((await feed()).headers.get("cache-control")).toContain("s-maxage=3600");
+  });
+
+  it("still returns a valid, empty feed (not an error) when the posts cannot be loaded, and does not cache it", async () => {
+    mockPosts.mockRejectedValue(new Error("database unavailable"));
+
+    const response = await feed();
+    const xml = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(xml).toContain('<rss version="2.0"');
+    expect(xml).not.toContain("<item>");
+    expect(response.headers.get("cache-control")).toBe("no-store");
   });
 });

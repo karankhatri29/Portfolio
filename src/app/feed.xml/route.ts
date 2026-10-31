@@ -6,7 +6,15 @@ import { siteUrl } from "@/lib/site";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const posts = await listBlogPosts();
+  // If the posts cannot be loaded (for example the database is briefly down) the feed is still valid, just empty,
+  // and it is not cached, so the next request tries again instead of serving an empty feed for an hour.
+  let posts: Awaited<ReturnType<typeof listBlogPosts>> = [];
+  let loaded = true;
+  try {
+    posts = await listBlogPosts();
+  } catch {
+    loaded = false;
+  }
   const xml = buildFeed({
     siteUrl: siteUrl(),
     title: `${portfolioContent.name} - Writing and research`,
@@ -14,5 +22,5 @@ export async function GET() {
     posts,
   });
 
-  return new Response(xml, { headers: { "content-type": "application/rss+xml; charset=utf-8", "cache-control": "public, max-age=0, s-maxage=3600" } });
+  return new Response(xml, { headers: { "content-type": "application/rss+xml; charset=utf-8", "cache-control": loaded ? "public, max-age=0, s-maxage=3600" : "no-store" } });
 }
