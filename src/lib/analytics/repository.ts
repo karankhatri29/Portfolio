@@ -377,12 +377,28 @@ export async function exportMessages(): Promise<string[][]> {
   return rows.map((row) => [row.time_utc, row.name, row.email, row.message, row.status]);
 }
 
-export async function recordError(report: { source: string; message: string; stack: string; path: string; digest: string }): Promise<void> {
+/** Stores an error and returns whether the same source and message had not been seen in the last 24 hours. */
+export async function recordError(report: { source: string; message: string; stack: string; path: string; digest: string }): Promise<boolean> {
   const sql = sqlClient();
-  await sql`
-    INSERT INTO error_logs (source, message, stack, path, digest)
-    VALUES (${report.source}, ${report.message}, ${report.stack}, ${report.path}, ${report.digest})
-  `;
+  const rows = (await sql`
+    WITH seen AS (
+      SELECT EXISTS (SELECT 1 FROM error_logs WHERE source = ${report.source} AND message = ${report.message} AND created_at > now() - interval '24 hours') AS seen
+    ),
+    inserted AS (
+      INSERT INTO error_logs (source, message, stack, path, digest)
+      VALUES (${report.source}, ${report.message}, ${report.stack}, ${report.path}, ${report.digest})
+      RETURNING id
+    )
+    SELECT NOT seen.seen AS "firstSeen" FROM seen, inserted
+  `) as { firstSeen: boolean }[];
+  return rows[0]?.firstSeen ?? false;
+}
+
+/** How many different server errors were logged recently; used to cap alert emails during an incident. */
+export async function countRecentServerErrorGroups(minutes: number): Promise<number> {
+  const sql = sqlClient();
+  const rows = (await sql`SELECT COUNT(DISTINCT message)::int AS count FROM error_logs WHERE source = 'server' AND created_at >= now() - make_interval(mins => ${minutes}::int)`) as { count: number }[];
+  return rows[0]?.count ?? 0;
 }
 
 const ERROR_RETENTION_DAYS = 90;

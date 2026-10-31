@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { PrintButton } from "@/components/PrintButton";
 import { portfolioContent } from "@/data/portfolio";
+import { withReportedFallback } from "@/lib/analytics/report";
 import { listProjects, listSkills } from "@/lib/content/repository";
 import { siteUrl } from "@/lib/site";
 
@@ -23,7 +24,7 @@ const heading = "font-display text-xl font-semibold border-b border-ink/20 pb-1 
 const muted = "text-muted print:text-neutral-700";
 
 export default async function ResumePage() {
-  const [projects, skills] = await Promise.all([listProjects().catch(() => []), listSkills().catch(() => [])]);
+  const [projects, skills] = await Promise.all([withReportedFallback(listProjects(), "/resume"), withReportedFallback(listSkills(), "/resume")]);
   const { about } = portfolioContent;
 
   return (

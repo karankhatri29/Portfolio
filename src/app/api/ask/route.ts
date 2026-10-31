@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { withReportedFallback } from "@/lib/analytics/report";
 import { visitorHash } from "@/lib/analytics/tracking";
 import { portfolioContent } from "@/data/portfolio";
 import { askGemini } from "@/lib/ask/gemini";
@@ -50,7 +51,7 @@ export async function POST(request: Request) {
     if (Math.random() < 0.05) void pruneOldAsks().catch(() => undefined);
 
     // If the database is unreachable the assistant still knows everything in the static site content.
-    const [projects, skills] = await Promise.all([listProjects().catch(() => []), listSkills().catch(() => [])]);
+    const [projects, skills] = await Promise.all([withReportedFallback(listProjects(), "/api/ask"), withReportedFallback(listSkills(), "/api/ask")]);
     const systemPrompt = buildSystemPrompt(buildKnowledge(portfolioContent, projects, skills), contactEmail(portfolioContent));
 
     const result = await askGemini({ question: checked.question, systemPrompt });

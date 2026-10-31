@@ -13,7 +13,7 @@ import { Testimonials } from "@/components/Testimonials";
 import { PortfolioShell } from "@/components/PortfolioShell";
 import { ProjectShowcase } from "@/components/ProjectShowcase";
 import { WritingPreview } from "@/components/WritingPreview";
-import { reportServerError } from "@/lib/analytics/report";
+import { withReportedFallback } from "@/lib/analytics/report";
 import { listBlogPosts } from "@/lib/content/blog";
 import { listHighlights, listProjects, listSkills } from "@/lib/content/repository";
 import { portfolioContent } from "@/data/portfolio";
@@ -31,20 +31,14 @@ export const metadata: Metadata = {
 export default async function Page() {
   const githubUser = githubUsername(portfolioContent.contactLinks);
   // Optional sections must never take the page down: a missing table or GitHub outage just hides them.
-  // Projects and skills are survivable too, but a failure is recorded so it appears in the admin Errors list.
-  const survive = <T,>(query: Promise<T[]>) =>
-    query.catch(async (error: unknown) => {
-      console.error("home page content failed", error instanceof Error ? error.message : error);
-      await reportServerError(error, "/");
-      return [] as T[];
-    });
+  // A failure is recorded so it appears in the admin Errors list instead of silently showing an empty section.
   const [session, projects, skills, highlights, github, writing] = await Promise.all([
     auth(),
-    survive(listProjects()),
-    survive(listSkills()),
-    listHighlights().catch(() => []),
+    withReportedFallback(listProjects(), "/"),
+    withReportedFallback(listSkills(), "/"),
+    withReportedFallback(listHighlights(), "/"),
     githubUser ? getGithubActivity(githubUser) : Promise.resolve(null),
-    listBlogPosts().catch(() => []),
+    withReportedFallback(listBlogPosts(), "/"),
   ]);
   const skillGraph = buildSkillGraph(skills, projects);
   const githubProfile = portfolioContent.contactLinks.find((link) => link.icon === "github")?.href;

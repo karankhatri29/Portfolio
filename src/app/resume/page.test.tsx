@@ -5,6 +5,7 @@ import ResumePage from "@/app/resume/page";
 import { portfolioContent } from "@/data/portfolio";
 import { listProjects, listSkills } from "@/lib/content/repository";
 
+jest.mock("@/lib/analytics/report", () => ({ withReportedFallback: (query: Promise<unknown[]>) => query.catch(() => []) }));
 jest.mock("@/lib/content/repository", () => ({ listProjects: jest.fn(), listSkills: jest.fn() }));
 
 const mockProjects = jest.mocked(listProjects);
